@@ -14,7 +14,7 @@ export function renderCommands(container, commands) {
   container.innerHTML = commands.map((c, i) => `
     <div class="cmd-block">
       <div class="cmd-label">${c.isSeed ? t('bs.cmd.seed') : t('bs.cmd.join', {n: i+1})}
-        — ${esc(c.name)}</div>
+        — ${esc(c.name)} ${c.auto ? '<span class="auto-badge">🤖 Auto</span>' : ''}</div>
       <pre class="cmd-pre" data-cmd="${escAttr(c.cmd)}"><span class="copy-hint">${t('bs.cmd.copy')}</span>${esc(c.cmd)}</pre>
       <div class="cmd-note">${c.isSeed ? t('bs.cmd.seedNote') : t('bs.cmd.joinNote')}</div>
     </div>`).join('');

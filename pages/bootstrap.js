@@ -1,60 +1,163 @@
-// site/pages/bootstrap.js
-// 职责：冷启动页 —— 填拓扑 → 推 HCL → CI → curl 命令
-// 状态：nodes（页面级，不上全局）
+// pages/bootstrap.js
+// 职责：冷启动页 — 种子自举 + 集群扩张双 tab
+// 种子 tab：单节点，推 HCL → CI → curl（暗夜下蛋）
+// 扩张 tab：OIDC 登录后，用通用 join 脚本加入集群
 
 import * as Crypto  from '../lib/crypto.js';
 import * as Topo    from '../lib/topology.js';
 import * as HCL     from '../lib/hcl-builder.js';
 import * as GitHub  from '../lib/github-client.js';
 import * as Cmd     from '../lib/cmd-builder.js';
-import * as TopoUI  from '../ui/topology-form.js';
-import * as CredUI  from '../ui/credential-form.js';
 import * as Output  from '../ui/output.js';
+import * as Auth    from '../lib/auth.js';
+import { parse }    from '../lib/parse-collect.js';
 import { html as esc } from '../lib/escape.js';
 import { t } from '../lib/i18n.js';
 
-let nodes = [Topo.createNode('seed-1', '', 'server')];
+const _sq = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'";
+
+let _tab = 'seed';                 // 'seed' | 'expansion'
+let _seedNode = Topo.createNode('seed-1', '', 'server');
+let _expansionFields = null;       // parsed collect.sh fields for expansion node
 
 export function render(main, status, CFG) {
   main.innerHTML = `
+    <div class="bs-tabs">
+      <button class="bs-tab ${_tab==='seed'?'active':''}" data-tab="seed">🥇 ${t('bs.tab.seed')}</button>
+      <button class="bs-tab ${_tab==='expansion'?'active':''}" data-tab="expansion">🥈 ${t('bs.tab.expansion')}</button>
+    </div>
     <div class="coldstart-layout">
-      <div class="coldstart-left">
-        <h3>${t('bs.heading')}</h3>
-        <div id="topo-container"></div>
-        <div class="err-list" id="topo-errors" style="display:none"></div>
-        <button class="btn btn-primary btn-lg" id="btn-generate">${t('bs.btn.generate')}</button>
-        <div class="section-divider"></div>
-        <h3>${t('bs.creds.heading')}</h3>
-        <div id="creds-container"></div>
-      </div>
+      <div class="coldstart-left" id="bs-left"></div>
       <div class="coldstart-right" id="output-container">
         <div class="empty"><div class="empty-icon">📋</div>
           <div class="empty-title">${t('bs.output.empty')}</div>
-          <div class="empty-desc">${t('bs.output.emptySub')}</div></div>
+          <div class="empty-desc">${_tab==='seed' ? t('bs.output.emptySub') : t('bs.output.expEmpty')}</div></div>
       </div>
     </div>`;
 
-  CredUI.render(document.getElementById('creds-container'));
-  _renderTopoUI(document.getElementById('topo-container'));
-  document.getElementById('btn-generate').addEventListener('click', () => _generate(status, CFG));
-}
-
-function _renderTopoUI(container) {
-  TopoUI.render(container, nodes, e => {
-    if (e.type === 'add')                        { nodes = Topo.addNode(nodes); _renderTopoUI(container); }
-    else if (e.type === 'remove')                { nodes = Topo.removeNode(nodes, e.id); _renderTopoUI(container); }
-    else if (e.type === 'update' && e.field === 'role')
-      { nodes = Topo.updateNode(nodes, e.id, e.field, e.value); _renderTopoUI(container); }
-    else if (e.type === 'update')
-      { nodes = Topo.updateNode(nodes, e.id, e.field, e.value); }
+  // Tab switching
+  main.querySelectorAll('.bs-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      _tab = btn.dataset.tab;
+      render(main, status, CFG);
+    });
   });
+
+  const left = document.getElementById('bs-left');
+  if (_tab === 'seed') _renderSeed(left, status, CFG);
+  else _renderExpansion(left, status, CFG);
 }
 
-async function _generate(status, CFG) {
-  const creds = CredUI.getValues();
+// ── Seed tab ──────────────────────────────────────────────
+
+function _renderSeed(container, status, CFG) {
+  container.innerHTML = `
+    <h3>${t('bs.heading')}</h3>
+    <div id="seed-paste-area"></div>
+    <div id="seed-form"></div>
+    <div class="err-list" id="seed-errors" style="display:none"></div>
+    <button class="btn btn-primary btn-lg" id="btn-generate-seed">${t('bs.btn.generate')}</button>
+    <div class="section-divider"></div>
+    <h3>${t('bs.creds.heading')}</h3>
+    <div id="seed-creds"></div>`;
+
+  _renderPasteArea(document.getElementById('seed-paste-area'), fields => {
+    _seedNode = Topo.applyCollect([_seedNode], _seedNode._id, fields)[0];
+    _renderSeedForm(document.getElementById('seed-form'));
+  });
+
+  _renderSeedForm(document.getElementById('seed-form'));
+  _renderSeedCreds(document.getElementById('seed-creds'));
+  document.getElementById('btn-generate-seed').addEventListener('click', () => _generateSeed(status, CFG));
+}
+
+function _renderSeedForm(container) {
+  const n = _seedNode;
+  const collected = n._collected
+    ? `<span class="collected-badge" title="${_collectedTitle(n)}">✓ ${t('bs.collected')}</span>`
+    : '';
+
+  container.innerHTML = `
+    <div class="node-row node-seed">
+      <div class="fg fg-name"><label>${t('bs.node.name')} <span class="seed-badge">${t('bs.seed.badge')}</span> ${collected}</label>
+        <input type="text" class="nf-name" value="${esc(n.name)}" placeholder="seed-1"></div>
+      <div class="fg fg-ip"><label>${t('bs.node.ip')}</label>
+        <input type="text" class="nf-ip" value="${esc(n.ip)}" placeholder="x.x.x.x"></div>
+      <div class="fg fg-role"><label>${t('bs.node.role')}</label>
+        <div class="seed-role-locked">${t('bs.seed.role')}</div></div>
+    </div>
+    <div class="node-advanced">
+      <button class="adv-toggle" type="button">⚙ ${t('bs.node.syscfg')} ${n._collected ? '●' : ''}</button>
+      <div class="adv-body" style="display:none">
+        <div class="fg"><label>Hostname</label>
+          <input type="text" class="nf-hostname" value="${esc(n.hostname||'')}" placeholder="${esc(n.name)}"></div>
+        <div class="fg"><label>Timezone</label>
+          <input type="text" class="nf-timezone" value="${esc(n.timezone||'')}" placeholder="UTC"></div>
+        <div class="fg"><label>OS</label>
+          <select class="nf-os"><option value="linux" ${(n.os||'linux')==='linux'?'selected':''}>Linux</option>
+            <option value="freebsd" ${n.os==='freebsd'?'selected':''}>FreeBSD</option></select></div>
+        <div class="fg"><label>Network</label>
+          <select class="nf-network"><option value="dhcp" ${(n.network||'dhcp')==='dhcp'?'selected':''}>DHCP</option>
+            <option value="static" ${n.network==='static'?'selected':''}>Static IP</option></select></div>
+      </div>
+    </div>`;
+
+  // Toggle advanced
+  const toggle = container.querySelector('.adv-toggle');
+  const body   = container.querySelector('.adv-body');
+  toggle.addEventListener('click', () => {
+    body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+  });
+
+  // Bind events
+  _bind(container, '.nf-name',     v => _seedNode = Topo.updateNode([_seedNode], _seedNode._id, 'name', v)[0]);
+  _bind(container, '.nf-ip',       v => _seedNode = Topo.updateNode([_seedNode], _seedNode._id, 'ip', v)[0]);
+  _bind(container, '.nf-hostname', v => _seedNode = Topo.updateNode([_seedNode], _seedNode._id, 'hostname', v)[0]);
+  _bind(container, '.nf-timezone', v => _seedNode = Topo.updateNode([_seedNode], _seedNode._id, 'timezone', v)[0]);
+  _bind(container, '.nf-os',       v => _seedNode = Topo.updateNode([_seedNode], _seedNode._id, 'os', v)[0]);
+  _bind(container, '.nf-network',  v => _seedNode = Topo.updateNode([_seedNode], _seedNode._id, 'network', v)[0]);
+}
+
+let _seedCreds = {};  // { gossipKey, githubPat, repo, branch }
+
+function _renderSeedCreds(container) {
+  const cfg = {
+    repo:   localStorage.getItem('anvil_repo')   || 'k3s-forge/nomad-gitops',
+    branch: localStorage.getItem('anvil_branch') || 'main',
+  };
+  container.innerHTML = `
+    <div class="fg"><label>${t('bs.gossip.label')} <span class="hint">(${t('bs.gossip.hint')})</span></label>
+      <input type="password" id="cfg-gossip-key" placeholder="${t('bs.gossip.hint')}"></div>
+    <div class="fg"><label>${t('bs.github.label')} <span class="hint">(${t('bs.github.hint')})</span></label>
+      <input type="password" id="cfg-github-pat" placeholder="ghp_... ${t('bs.github.label')}"></div>
+    <div class="fg"><label>${t('bs.repo.label')}</label>
+      <input type="text" id="cfg-repo" value="${esc(cfg.repo)}" placeholder="owner/repo"></div>
+    <div class="fg"><label>${t('bs.branch.label')}</label>
+      <input type="text" id="cfg-branch" value="${esc(cfg.branch)}" placeholder="main"></div>`;
+
+  // Restore saved values
+  if (_seedCreds.gossipKey) {
+    const gk = container.querySelector('#cfg-gossip-key');
+    if (gk) gk.value = _seedCreds.gossipKey;
+  }
+}
+
+function _getSeedCreds() {
+  return {
+    gossipKey:  document.getElementById('cfg-gossip-key')?.value.trim() || '',
+    githubPat:  document.getElementById('cfg-github-pat')?.value.trim() || '',
+    repo:       document.getElementById('cfg-repo')?.value.trim() || 'k3s-forge/nomad-gitops',
+    branch:     document.getElementById('cfg-branch')?.value.trim() || 'main',
+  };
+}
+
+async function _generateSeed(status, CFG) {
+  const creds = _getSeedCreds();
+  _seedCreds = creds;
+  const nodes = [_seedNode];
   const v = Topo.validate(nodes);
   if (!v.valid) {
-    _showTopoErrors(v.errors);
+    _showSeedErrors(v.errors);
     return;
   }
   if (!creds.githubPat) {
@@ -74,42 +177,38 @@ async function _generate(status, CFG) {
   try {
     const push = await GitHub.pushFiles(creds.githubPat, repo, branch,
       [{ path: 'bootstrap/pending/topology.hcl', content: hcl, mode: '100644' }],
-      'coldstart: topology from anvil');
-    Output.showStatus(status, t('bs.output.pushed'), 'loading');
+      'coldstart: seed topology from anvil');
 
+    Output.showStatus(status, t('bs.output.pushed'), 'loading');
     const ci = await GitHub.pollCI(creds.githubPat, repo, push.sha, 600000);
     if (!ci.success) {
       Output.showStatus(status, `${t('bs.output.ciFail')}: ${ci.runs.filter(r=>r.conclusion!=='success').map(r=>r.name).join(', ')}`, 'err');
       return;
     }
 
-    const srvNodes = nodes.filter(n => n.role === 'server');
-    const clientNodes = nodes.filter(n => n.role === 'client');
-    const scripts = srvNodes.map(n => ({
-      name: n.name,
-      url: `https://raw.githubusercontent.com/${repo}/${branch}/bootstrap/compiled/${n.name}.sh`,
-    }));
-
+    const scripts = [{ name: _seedNode.name, url: `https://raw.githubusercontent.com/${repo}/${branch}/bootstrap/compiled/${_seedNode.name}.sh` }];
     const cmds = Cmd.build(scripts, gossipKey, nodes);
     Output.showStatus(status, t('bs.output.ciOK'), 'ok');
     Output.renderCommands(out, cmds);
 
+    // Store gossip key + seed IP for expansion tab
+    localStorage.setItem('anvil_gossip_key', gossipKey);
+    localStorage.setItem('anvil_seed_ip',    _seedNode.ip || '');
+    localStorage.setItem('anvil_repo',       repo);
+    localStorage.setItem('anvil_branch',     branch);
+
+    // Guide
     const guide = document.createElement('div');
     guide.className = 'bootstrap-guide';
-    const clientNote = clientNodes.length
-      ? `<p class="text-muted">${t('bs.guide.clientNote', {names: clientNodes.map(n=>n.name).join(', ')})}</p>`
-      : '';
     guide.innerHTML = `
       <div class="section-divider"></div>
+      <div class="status status-ok" style="margin-bottom:.8rem">${t('bs.cmd.autoNote')}</div>
       <h4>${t('bs.guide.title')}</h4>
       <ol class="guide-steps">
         <li>${t('bs.guide.step1')}</li>
         <li>${t('bs.guide.step2')}</li>
-        <li>${t('bs.guide.step3')}</li>
-        <li>${t('bs.guide.step4')}</li>
-      </ol>
-      ${clientNote}
-      <p class="text-muted" style="margin-top:.75rem">${t('bs.guide.after')}</p>`;
+        <li>${t('bs.guide.after')}</li>
+      </ol>`;
     out.appendChild(guide);
 
     const details = document.createElement('details');
@@ -121,8 +220,200 @@ async function _generate(status, CFG) {
   }
 }
 
-function _showTopoErrors(errors) {
-  const el = document.getElementById('topo-errors');
+// ── Expansion tab ─────────────────────────────────────────
+
+function _renderExpansion(container, status, CFG) {
+  const loggedIn = Auth.isLoggedIn();
+
+  if (!loggedIn) {
+    container.innerHTML = `
+      <div class="empty" style="padding:2rem">
+        <div class="empty-icon">🔑</div>
+        <div class="empty-title">${t('bs.exp.loginRequired')}</div>
+        <div class="empty-desc">${t('bs.exp.loginHint')}</div>
+      </div>`;
+    return;
+  }
+
+  const user = Auth.userName();
+  const seedIP = localStorage.getItem('anvil_seed_ip') || '';
+  const gossipKey = localStorage.getItem('anvil_gossip_key') || '';
+
+  if (!gossipKey || !seedIP) {
+    container.innerHTML = `
+      <div class="empty" style="padding:2rem">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">${t('bs.exp.noSeed')}</div>
+        <div class="empty-desc">${t('bs.exp.noSeedHint')}</div>
+      </div>`;
+    return;
+  }
+
+  const fields = _expansionFields;
+  const hasCollected = !!fields;
+
+  container.innerHTML = `
+    <h3>${t('bs.heading')} — ${esc(user)}</h3>
+    <div id="exp-paste-area"></div>
+    <div id="exp-form"></div>
+    <div class="section-divider"></div>
+    <div class="fg"><label>${t('bs.exp.seedIP')}</label>
+      <input type="text" id="exp-seed-ip" value="${esc(seedIP)}" readonly class="readonly"></div>
+    <button class="btn btn-primary btn-lg" id="btn-generate-exp">${t('bs.exp.btn.join')}</button>`;
+
+  _renderPasteArea(document.getElementById('exp-paste-area'), f => {
+    _expansionFields = f;
+    _renderExpansion(container, status, CFG);
+  });
+
+  _renderExpForm(document.getElementById('exp-form'));
+  document.getElementById('btn-generate-exp').addEventListener('click', () => _generateExp(status));
+}
+
+function _renderExpForm(container) {
+  const f = _expansionFields || {};
+  const collected = f._collected
+    ? `<span class="collected-badge" title="${_collectedTitle(f)}">✓ ${t('bs.collected')}</span>`
+    : '';
+
+  container.innerHTML = `
+    <div class="node-row">
+      <div class="fg fg-name"><label>${t('bs.node.name')} ${collected}</label>
+        <input type="text" id="exp-name" value="${esc(f.name||'')}" placeholder="node-name" readonly></div>
+      <div class="fg fg-ip"><label>${t('bs.node.ip')}</label>
+        <input type="text" id="exp-ip" value="${esc(f.ip||'')}" placeholder="x.x.x.x" readonly></div>
+      <div class="fg fg-role"><label>${t('bs.node.role')}</label>
+        <select id="exp-role">
+          <option value="client">${t('bs.role.client')}</option>
+          <option value="server">${t('bs.role.server')}</option>
+        </select></div>
+    </div>
+    <div class="node-advanced">
+      <button class="adv-toggle" type="button">⚙ ${t('bs.node.syscfg')} ${f._collected ? '●' : ''}</button>
+      <div class="adv-body" style="display:none">
+        <div class="fg"><label>Hostname</label>
+          <input type="text" id="exp-hostname" value="${esc(f.hostname||'')}" readonly></div>
+        <div class="fg"><label>Timezone</label>
+          <input type="text" id="exp-timezone" value="${esc(f.timezone||'UTC')}" readonly></div>
+        <div class="fg"><label>OS</label>
+          <input type="text" id="exp-os" value="${esc(f.os||'linux')}" readonly></div>
+        <div class="fg"><label>Network</label>
+          <input type="text" id="exp-net" value="${esc(f.network||'dhcp')}" readonly></div>
+      </div>
+    </div>`;
+
+  const toggle = container.querySelector('.adv-toggle');
+  const body   = container.querySelector('.adv-body');
+  if (toggle) toggle.addEventListener('click', () => {
+    body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+  });
+}
+
+function _generateExp(status) {
+  const f = _expansionFields;
+  if (!f) {
+    Output.showStatus(status, t('bs.exp.noCollect'), 'err');
+    return;
+  }
+
+  const seedIP = localStorage.getItem('anvil_seed_ip') || '';
+  const gossipKey = localStorage.getItem('anvil_gossip_key') || '';
+  const repo = localStorage.getItem('anvil_repo') || 'k3s-forge/nomad-gitops';
+  const branch = localStorage.getItem('anvil_branch') || 'main';
+
+  if (!gossipKey || !seedIP) {
+    Output.showStatus(status, t('bs.exp.noSeed'), 'err');
+    return;
+  }
+
+  const role = document.getElementById('exp-role')?.value || 'client';
+  const url = `https://raw.githubusercontent.com/${repo}/${branch}/bootstrap/compiled/join-${role}.sh`;
+
+  let cmd = 'curl -s ' + url + ' | ';
+  const envs = [];
+  if (f.hostname) envs.push('NODE_HOSTNAME=' + _sq(f.hostname));
+  if (f.timezone) envs.push('NODE_TZ=' + _sq(f.timezone));
+  if (f.ip) envs.push('NODE_IP=' + _sq(f.ip));
+  cmd += envs.join(' ') + ' ';
+
+  cmd += "sh -s -- --gossip-key " + _sq(gossipKey);
+  cmd += " --seed-addr " + _sq(seedIP);
+  cmd += " --auto";
+
+  const out = document.getElementById('output-container');
+  Output.showStatus(status, t('bs.exp.ready'), 'ok');
+  Output.renderCommands(out, [{
+    name: f.hostname || f.name || 'node',
+    role,
+    isSeed: false,
+    auto: true,
+    url,
+    cmd,
+  }]);
+
+  // Note
+  const note = document.createElement('div');
+  note.className = 'status status-ok';
+  note.style.marginTop = '.8rem';
+  note.textContent = t('bs.exp.joinNote');
+  out.appendChild(note);
+}
+
+// ── Shared helpers ────────────────────────────────────────
+
+function _renderPasteArea(container, onApply) {
+  container.innerHTML = `
+    <div class="paste-area">
+      <button class="paste-toggle" type="button">📋 ${t('bs.paste.toggle')}</button>
+      <div class="paste-body" style="display:none">
+        <p class="paste-hint">${t('bs.paste.hint')}</p>
+        <textarea class="paste-input" rows="5" placeholder='${t('bs.paste.placeholder')}'></textarea>
+        <button class="btn btn-sm paste-apply">${t('bs.paste.apply')}</button>
+        <span class="paste-msg"></span>
+      </div>
+    </div>`;
+
+  const toggle = container.querySelector('.paste-toggle');
+  const body   = container.querySelector('.paste-body');
+  const input  = container.querySelector('.paste-input');
+  const apply  = container.querySelector('.paste-apply');
+  const msg    = container.querySelector('.paste-msg');
+
+  toggle.addEventListener('click', () => {
+    body.style.display = body.style.display === 'none' ? 'block' : 'none';
+  });
+
+  apply.addEventListener('click', () => {
+    const raw = input.value.trim();
+    if (!raw) { msg.textContent = '✗ ' + t('bs.paste.empty'); msg.className = 'paste-msg err'; return; }
+    const r = parse(raw);
+    if (!r.ok) { msg.textContent = '✗ ' + r.error; msg.className = 'paste-msg err'; return; }
+    msg.textContent = `✓ ${t('bs.paste.ok')} → ${r.fields.name}`;
+    msg.className = 'paste-msg ok';
+    input.value = '';
+    onApply(r.fields);
+  });
+}
+
+function _bind(container, sel, fn) {
+  const el = container.querySelector(sel);
+  if (el) el.addEventListener('input', () => fn(el.value));
+}
+
+function _showSeedErrors(errors) {
+  const el = document.getElementById('seed-errors');
+  if (!el) return;
   el.style.display = 'block';
   el.innerHTML = errors.map(e => `<span class="err">${esc(e)}</span>`).join('<br>');
+}
+
+function _collectedTitle(n) {
+  if (!n._collected) return '';
+  const c = n._collected;
+  return [
+    `OS: ${c.os_pretty}`, `Kernel: ${c.kernel}`, `Arch: ${c.arch}`,
+    `Iface: ${c.best_iface}`, `IP: ${n.ip}`, `GW: ${c.best_gateway}`,
+    `Mem: ${c.mem_mb}MB`, `Disk: ${c.disk_gb}GB`,
+    `Nomad: ${c.nomad_version || 'none'}`
+  ].join('\n');
 }

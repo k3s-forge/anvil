@@ -217,6 +217,33 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
   cursor:default;border-style:dashed;
 }
 
+/* ── Paste area ────────────────────────────────────────── */
+.paste-area{margin-bottom:.6rem}
+.paste-toggle{
+  font-size:.78rem;padding:.3rem .65rem;border-radius:var(--radius-sm);
+  background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.18);
+  color:var(--ok);cursor:pointer;transition:background .15s;
+}
+.paste-toggle:hover{background:rgba(48,209,88,.14)}
+.paste-body{margin-top:.6rem;padding:.7rem;border-radius:var(--radius);border:1px solid var(--bd);background:var(--bg-card)}
+.paste-hint{font-size:.75rem;color:var(--tx-dim);margin:0 0 .5rem;line-height:1.5}
+.paste-input{
+  width:100%;min-height:80px;font:.72rem var(--font-mono);padding:.5rem;
+  border-radius:var(--radius-sm);border:1px solid var(--bd);
+  background:var(--bg);color:var(--tx);resize:vertical;box-sizing:border-box;
+}
+.paste-apply{margin-top:.4rem;margin-right:.5rem}
+.paste-msg{font-size:.75rem;font-weight:500}
+.paste-msg.ok{color:var(--ok)} .paste-msg.err{color:var(--er)}
+
+/* ── Collected badge ───────────────────────────────────── */
+.collected-badge{
+  font-size:.6rem;font-weight:600;color:var(--ok);
+  background:rgba(48,209,88,.1);padding:.08rem .4rem;
+  border-radius:3px;margin-left:.3rem;vertical-align:middle;
+  cursor:help;
+}
+
 @media(max-width:600px){.node-row{gap:.35rem}
   .fg-name,.fg-ip,.fg-role,.fg-join{flex:1 1 45%;min-width:0}}
 
@@ -489,6 +516,11 @@ input:disabled,select:disabled{
   font-size:.82rem;color:var(--tx-dim);margin-bottom:.5rem;
   font-weight:500;letter-spacing:-.01em;
 }
+.auto-badge{
+  font-size:.62rem;font-weight:600;color:var(--ok);
+  background:rgba(48,209,88,.1);padding:.06rem .35rem;
+  border-radius:3px;margin-left:.35rem;vertical-align:middle;
+}
 .cmd-note{
   font-size:.72rem;color:var(--tx-muted);margin-top:.4rem;
 }
@@ -526,6 +558,22 @@ input:disabled,select:disabled{
   border:1px solid var(--bd);
   max-height:400px;overflow-y:auto;
   white-space:pre-wrap;word-break:break-all;
+}
+
+/* ── Tabs ─────────────────────────────────────────────── */
+.bs-tabs{
+  display:flex;gap:.3rem;margin-bottom:1.2rem;
+}
+.bs-tab{
+  padding:.5rem 1.2rem;font-size:.82rem;font-weight:500;
+  border:1px solid var(--bd);border-radius:var(--radius-sm);
+  background:var(--bg);color:var(--tx-dim);cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.bs-tab:hover{background:var(--bg-card);color:var(--tx)}
+.bs-tab.active{
+  background:rgba(10,132,255,.08);border-color:rgba(10,132,255,.25);
+  color:var(--ac);
 }
 
 /* ── Coldstart Layout ─────────────────────────────────── */
@@ -671,3 +719,9 @@ input:disabled,select:disabled{
 }
 .theme-switch button:hover:not(.active),
 .lang-switch button:hover:not(.active){color:var(--tx);border-color:var(--bd-hover)}
+
+/* ── Readonly inputs ──────────────────────────────────── */
+input.readonly,input[readonly]{
+  background:rgba(255,255,255,.02);color:var(--tx-dim);
+  cursor:default;border-style:dashed;opacity:.8;
+}

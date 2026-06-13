@@ -14,6 +14,7 @@ import { generate as genServer } from './lib/gen-server.mjs';
 import { generate as genClient } from './lib/gen-client.mjs';
 import { generate as genKanidm } from './lib/gen-kanidm.mjs';
 import { generate as genNginx  } from './lib/gen-nginx.mjs';
+import { generate as genJoin   } from './lib/gen-join.mjs';
 
 const [ ,, input, outDir ] = process.argv;
 if (!input || !outDir) {
@@ -46,5 +47,11 @@ writeFileSync(`${outDir}/kanidm.hcl`, kanidmHcl);
 writeFileSync(`${outDir}/nginx.hcl`,  nginxHcl);
 console.error(`✓ kanidm.hcl`);
 console.error(`✓ nginx.hcl`);
+
+// ---- Generic join scripts (for cluster expansion) ----
+writeFileSync(`${outDir}/join-server.sh`, genJoin('server'), { mode: 0o755 });
+writeFileSync(`${outDir}/join-client.sh`, genJoin('client'), { mode: 0o755 });
+console.error(`✓ join-server.sh`);
+console.error(`✓ join-client.sh`);
 
 console.error(`\nDone. ${topo.nodes.length} scripts + 2 jobs → ${outDir}`);
