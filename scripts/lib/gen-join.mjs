@@ -64,6 +64,29 @@ fi
   else tzsetup "{D}NODE_TZ" 2>/dev/null || true; fi
   ok "tz: {D}NODE_TZ"; }
 
+# ---- SSH Hardening ----
+_ssh_harden() {
+  local CFG=/etc/ssh/sshd_config
+  if grep -q "^Include" "{D}CFG" 2>/dev/null && [[ -d /etc/ssh/sshd_config.d ]]; then
+    CFG=/etc/ssh/sshd_config.d/99-anvil.conf
+  fi
+  cp "{D}CFG" "{D}CFG.bak.{D}(date +%s)" 2>/dev/null || true
+  cat >> "{D}CFG" <<'SSHEOF'
+PermitRootLogin prohibit-password
+PasswordAuthentication no
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+X11Forwarding no
+SSHEOF
+  rm -f /etc/ssh/ssh_host_dsa_key* /etc/ssh/ssh_host_ecdsa_key* 2>/dev/null || true
+  if sshd -t 2>/dev/null; then
+    if [[ {D}IS_LINUX -eq 1 ]]; then systemctl reload sshd 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+    else service sshd reload 2>/dev/null || service sshd restart 2>/dev/null || true; fi
+    ok "SSH hardened"
+  fi
+}
+_ssh_harden
+
 # ---- Reinstall ----
 [[ {D}REINSTALL -eq 1 ]] && {
   if [[ {D}IS_LINUX -eq 1 ]]; then systemctl stop nomad 2>/dev/null || true
@@ -177,6 +200,29 @@ else fail "unsupported OS"; fi
 [[ -n "{D}NODE_TZ" ]] && {
   if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone "{D}NODE_TZ" 2>/dev/null || true
   else tzsetup "{D}NODE_TZ" 2>/dev/null || true; fi; }
+
+# ---- SSH Hardening ----
+_ssh_harden() {
+  local CFG=/etc/ssh/sshd_config
+  if grep -q "^Include" "{D}CFG" 2>/dev/null && [[ -d /etc/ssh/sshd_config.d ]]; then
+    CFG=/etc/ssh/sshd_config.d/99-anvil.conf
+  fi
+  cp "{D}CFG" "{D}CFG.bak.{D}(date +%s)" 2>/dev/null || true
+  cat >> "{D}CFG" <<'SSHEOF'
+PermitRootLogin prohibit-password
+PasswordAuthentication no
+PubkeyAuthentication yes
+PermitEmptyPasswords no
+X11Forwarding no
+SSHEOF
+  rm -f /etc/ssh/ssh_host_dsa_key* /etc/ssh/ssh_host_ecdsa_key* 2>/dev/null || true
+  if sshd -t 2>/dev/null; then
+    if [[ {D}IS_LINUX -eq 1 ]]; then systemctl reload sshd 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+    else service sshd reload 2>/dev/null || service sshd restart 2>/dev/null || true; fi
+    ok "SSH hardened"
+  fi
+}
+_ssh_harden
 
 [[ {D}REINSTALL -eq 1 ]] && {
   if [[ {D}IS_LINUX -eq 1 ]]; then systemctl stop nomad 2>/dev/null || true

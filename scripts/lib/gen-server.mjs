@@ -209,18 +209,58 @@ else warn "tuning skipped by user"; fi
 banner "SSH Hardening"
 if [[ {D}SKIP_SSH -eq 1 ]]; then warn "skipped (--skip-ssh)"
 elif confirm "Apply SSH hardening? [Y/n]"; then
-  cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak.{D}(date +%s) 2>/dev/null || true
-  sed -i -E 's/^#?(PermitRootLogin|PasswordAuthentication|PubkeyAuthentication|PermitEmptyPasswords|X11Forwarding).*/# removed by anvil/' /etc/ssh/sshd_config 2>/dev/null || true
-  cat >> /etc/ssh/sshd_config << 'EOF'
+  SSHD_CFG=/etc/ssh/sshd_config
+  cp "{D}SSHD_CFG" "{D}SSHD_CFG.bak.{D}(date +%s)" 2>/dev/null || true
+
+  # Store custom conf in a drop-in directory when supported
+  if grep -q "^Include" "{D}SSHD_CFG" 2>/dev/null && [[ -d /etc/ssh/sshd_config.d ]]; then
+    SSHD_CFG=/etc/ssh/sshd_config.d/99-anvil.conf
+  fi
+
+  # ── AddressFamily auto-detect ──
+  AF="any"
+  if [[ "{D}{HAS_IPV6}" != "true" && "{D}{HAS_IPV4}" == "true" ]]; then AF="inet"
+  elif [[ "{D}{HAS_IPV6}" == "true" && "{D}{HAS_IPV4}" != "true" ]]; then AF="inet6"
+  fi
+
+  # ── Port ──
+  SSH_PORT="{D}{SSH_PORT:-22}"
+
+  # ── HostKey optimization: ed25519 preferred, rsa fallback ──
+  cat >> "{D}SSHD_CFG" << 'EOF'
+# ── anvil SSH hardening ──
+Port {D}SSH_PORT
+AddressFamily {D}AF
+Protocol 2
 PermitRootLogin prohibit-password
 PasswordAuthentication no
 PubkeyAuthentication yes
 PermitEmptyPasswords no
 X11Forwarding no
+MaxAuthTries 3
+ClientAliveInterval 300
+ClientAliveCountMax 2
+# Preferred host keys (ed25519 is fastest + most secure)
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_rsa_key
 EOF
-  if [[ {D}IS_LINUX -eq 1 ]]; then systemctl reload sshd 2>/dev/null || true
-  else service sshd reload 2>/dev/null || true; fi
-  ok "SSH hardened"
+
+  # Cleanup unused host key types (dsa, ecdsa)
+  {D}SUDO rm -f /etc/ssh/ssh_host_dsa_key* /etc/ssh/ssh_host_ecdsa_key* 2>/dev/null || true
+
+  # Validate & reload (FreeBSD uses service, Linux uses systemctl)
+  if sshd -t 2>/dev/null; then
+    if [[ {D}IS_LINUX -eq 1 ]]; then
+      if systemctl is-active sshd >/dev/null 2>&1; then systemctl reload sshd 2>/dev/null || true
+      else systemctl restart sshd 2>/dev/null || true; fi
+    else
+      service sshd reload 2>/dev/null || service sshd restart 2>/dev/null || true
+    fi
+    ok "SSH hardened (port {D}SSH_PORT, addr-family {D}AF)"
+  else
+    warn "SSH config invalid — restoring backup"
+    cp "{D}SSHD_CFG.bak."* "{D}SSHD_CFG" 2>/dev/null || true; ls -t {D}SSHD_CFG.bak.* | head -1 | xargs cp -t "$(dirname {D}SSHD_CFG)"/ 2>/dev/null || true
+  fi
 else warn "SSH hardening skipped"; fi
 
 # ==================================================================
