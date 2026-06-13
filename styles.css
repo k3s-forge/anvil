@@ -438,3 +438,63 @@ input:disabled,select:disabled{
 
 /* ── Key preview ───────────────────────────────────────── */
 .key-preview{margin-top:.3rem;font-size:.78rem;color:var(--ok);font-family:var(--mono)}
+
+/* ── Coldstart Layout ─────────────────────────────────── */
+.coldstart-layout{
+  display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;min-height:480px;
+}
+@media(max-width:720px){.coldstart-layout{grid-template-columns:1fr}}
+.coldstart-left,.coldstart-right{
+  background:var(--bg-card);border:1px solid var(--bd);
+  border-radius:var(--radius-lg);padding:1.75rem;
+  box-shadow:var(--shd-card);
+}
+.coldstart-right{overflow-y:auto}
+
+/* ── Button variants ──────────────────────────────────── */
+.btn-lg{padding:.85rem 2rem;font-size:.95rem;font-weight:600;
+  width:100%;justify-content:center;letter-spacing:-.01em;}
+.btn-outline{
+  background:transparent;border:1px solid var(--bd);
+  color:var(--tx-dim);
+}
+.btn-outline:hover{background:rgba(255,255,255,.04);color:var(--tx);border-color:var(--bd-hover)}
+
+/* ── Error list ───────────────────────────────────────── */
+.err-list{
+  background:rgba(255,69,58,.06);border:1px solid rgba(255,69,58,.15);
+  border-radius:var(--radius-sm);padding:.75rem 1rem;margin-bottom:1rem;
+  font-size:.8rem;color:var(--er);display:none;
+}
+.err-list span{display:block;margin-bottom:.2rem}
+
+/* ── Form inputs (non-mono) ────────────────────────────── */
+.fg input:not([class*="nf-"]):not([class*="ff-"]),.fg select:not([class*="nf-"]){
+  font-family:var(--font);
+}
+
+/* ── Audit Chart Card ─────────────────────────────────── */
+.chart-card{
+  background:var(--bg-card);border:1px solid var(--bd);
+  border-radius:var(--radius);padding:1.25rem;
+}
+.waste-bar{
+  height:8px;background:rgba(255,255,255,.04);border-radius:4px;overflow:hidden;margin:.25rem 0 .5rem
+}
+.waste-bar .fill{
+  height:100%;border-radius:4px;transition:width .5s ease
+}
+.waste-bar .fill.ok{background:var(--ok)}
+.waste-bar .fill.warn{background:var(--warn)}
+.waste-bar .fill.err{background:var(--er)}
+
+/* ── Job Status ────────────────────────────────────────── */
+.health{display:inline-flex;align-items:center;gap:.35rem;font-size:.75rem;font-weight:500}
+.health svg,.health .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.health .dot.ok{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.health .dot.warn{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.health .dot.err{background:var(--er);box-shadow:0 0 6px var(--er)}
+.health .dot.off{background:var(--tx-muted);box-shadow:none}
+
+/* ── Form hint (global) ───────────────────────────────── */
+.fg .hint{display:inline;font-size:.7rem;color:var(--tx-muted);font-weight:400}
