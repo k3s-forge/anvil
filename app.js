@@ -31,7 +31,15 @@ window._anvil = { CFG, page: 'bootstrap' };
 export function init() {
   _checkOIDCCallback();
   _renderShell();
-  _navigate(window._anvil.page);
+  window._anvil.page = _getPageFromHash();
+  _renderPage();
+  window.addEventListener('hashchange', () => {
+    const next = _getPageFromHash();
+    if (next !== window._anvil.page) {
+      window._anvil.page = next;
+      _renderPage();
+    }
+  });
 }
 
 // ---- OIDC 回调 ----
@@ -92,8 +100,11 @@ function _renderNav() {
     const a = e.target.closest('[data-page]');
     if (a) {
       e.preventDefault();
-      window._anvil.page = a.dataset.page;
-      _navigate(a.dataset.page);
+      if (a.dataset.page !== window._anvil.page) {
+        window._anvil.page = a.dataset.page;
+        window.location.hash = a.dataset.page;
+        _renderPage();
+      }
     }
   });
 }
@@ -116,16 +127,20 @@ async function _renderLogin() {
   LoginUI.render(document.getElementById('nav-user'), {
     loginUrl,
     onLogout: () => {
-      _renderNav();
-      _navigate(window._anvil.page);
+      _renderPage();
     },
     onLogin: () => _renderLogin(),
   });
 }
 
 // ---- 路由 ----
-function _navigate(page) {
-  window._anvil.page = page;
+function _getPageFromHash() {
+  const h = window.location.hash.replace('#', '');
+  return h || 'bootstrap';
+}
+
+function _renderPage() {
+  const page = window._anvil.page;
   _renderNav();
   const main = document.getElementById('main');
   const status = document.getElementById('status-area');
@@ -133,12 +148,10 @@ function _navigate(page) {
 
   switch (page) {
     case 'bootstrap': pageBootstrap(main, status, CFG); break;
-    case 'deploy':    pageDeploy(main, status, CFG);     break;
-    case 'approval':  pageApproval(main, status, CFG);   break;
-    case 'audit':     pageAudit(main, status, CFG);      break;
-    case 'maintenance': pageMaint(main, status, CFG);  break;
-    case 'audit':
-      main.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">审计 — 即将推出</div></div>';
-      break;
+    case 'deploy':    pageDeploy(main, status, CFG);    break;
+    case 'approval':  pageApproval(main, status, CFG);  break;
+    case 'audit':     pageAudit(main, status, CFG);     break;
+    case 'maintenance': pageMaint(main, status, CFG);   break;
+    default: window._anvil.page = 'bootstrap'; _renderPage();
   }
 }
