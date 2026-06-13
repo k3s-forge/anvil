@@ -7,10 +7,10 @@
 import { html as esc } from '../lib/escape.js';
 import { t } from '../lib/i18n.js';
 
+const ADV_KEYS = ['hostname', 'timezone', 'os', 'bbr', 'network'];
+
 export function render(container, nodes, onEvent) {
   container.innerHTML = '';
-
-  const seed = nodes[0];
 
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
@@ -23,8 +23,7 @@ export function render(container, nodes, onEvent) {
 
     const joinField = (!isSeed && n.role === 'server')
       ? `<div class="fg fg-join"><label>${t('bs.node.join')}</label>
-           <input type="text" class="nf-join" value="${esc(seed.ip || '')}" readonly
-                  title="${t('bs.node.join')}"></div>`
+           <input type="text" class="nf-join" value="${esc(isSeed ? '' : nodes[0].ip)}" readonly></div>`
       : '';
 
     row.innerHTML = `
@@ -42,14 +41,42 @@ export function render(container, nodes, onEvent) {
       ${joinField}
       ${!isSeed ? `<button class="btn btn-sm btn-danger nf-rm" title="${t('bs.node.remove')}">✕</button>` : ''}`;
 
-    const nameEl = row.querySelector('.nf-name');
-    const ipEl = row.querySelector('.nf-ip');
-    const roleEl = row.querySelector('.nf-role');
+    // Advanced section
+    const adv = document.createElement('div');
+    adv.className = 'node-advanced';
+    const hasAdv = ADV_KEYS.some(k => n[k] !== void 0 && n[k] !== '' && n[k] !== false && !(k === 'bbr' && n[k] === true) && !(k === 'network' && n[k] === 'dhcp') && !(k === 'os' && n[k] === 'linux'));
+    adv.innerHTML = `
+      <button class="adv-toggle" type="button">⚙ ${t('bs.node.syscfg')} ${hasAdv ? '●' : ''}</button>
+      <div class="adv-body" style="display:none">
+        <div class="fg fg-hostname"><label>Hostname</label>
+          <input type="text" class="nf-hostname" value="${esc(n.hostname||'')}" placeholder="${esc(n.name)}"></div>
+        <div class="fg fg-tz"><label>Timezone</label>
+          <input type="text" class="nf-timezone" value="${esc(n.timezone||'')}" placeholder="UTC"></div>
+        <div class="fg fg-os"><label>OS</label>
+          <select class="nf-os">
+            <option value="linux"  ${(n.os||'linux')==='linux'?'selected':''}>Linux</option>
+            <option value="freebsd" ${n.os==='freebsd'?'selected':''}>FreeBSD</option>
+          </select></div>
+        <div class="fg fg-net"><label>Network</label>
+          <select class="nf-network">
+            <option value="dhcp"   ${(n.network||'dhcp')==='dhcp'?'selected':''}>DHCP</option>
+            <option value="static" ${n.network==='static'?'selected':''}>Static IP</option>
+          </select></div>
+        <div class="fg fg-bbr"><label>
+          <input type="checkbox" class="nf-bbr" ${n.bbr!==false?'checked':''}> BBR</label></div>
+      </div>`;
 
-    if (nameEl) nameEl.addEventListener('input', () =>
-      onEvent({ type: 'update', id: n._id, field: 'name', value: nameEl.value }));
-    if (ipEl) ipEl.addEventListener('input', () =>
-      onEvent({ type: 'update', id: n._id, field: 'ip', value: ipEl.value }));
+    // Toggle advanced
+    const toggle = adv.querySelector('.adv-toggle');
+    const body   = adv.querySelector('.adv-body');
+    toggle.addEventListener('click', () => {
+      body.style.display = body.style.display === 'none' ? 'flex' : 'none';
+    });
+
+    // Event bindings — main fields
+    bind(row, '.nf-name', 'name', n._id, onEvent, 'input');
+    bind(row, '.nf-ip',   'ip',   n._id, onEvent, 'input');
+    const roleEl = row.querySelector('.nf-role');
     if (roleEl) roleEl.addEventListener('change', () =>
       onEvent({ type: 'update', id: n._id, field: 'role', value: roleEl.value }));
 
@@ -57,6 +84,16 @@ export function render(container, nodes, onEvent) {
     if (rmEl) rmEl.addEventListener('click', () =>
       onEvent({ type: 'remove', id: n._id }));
 
+    // Event bindings — advanced fields
+    bind(adv, '.nf-hostname', 'hostname', n._id, onEvent, 'input');
+    bind(adv, '.nf-timezone', 'timezone', n._id, onEvent, 'input');
+    bind(adv, '.nf-os',       'os',       n._id, onEvent, 'change');
+    bind(adv, '.nf-network',  'network',  n._id, onEvent, 'change');
+    const bbrEl = adv.querySelector('.nf-bbr');
+    if (bbrEl) bbrEl.addEventListener('change', () =>
+      onEvent({ type: 'update', id: n._id, field: 'bbr', value: bbrEl.checked }));
+
+    row.appendChild(adv);
     container.appendChild(row);
   }
 
@@ -65,4 +102,10 @@ export function render(container, nodes, onEvent) {
   add.textContent = t('bs.node.add');
   add.addEventListener('click', () => onEvent({ type: 'add' }));
   container.appendChild(add);
+}
+
+function bind(el, sel, field, id, onEvent, evt) {
+  const input = el.querySelector(sel);
+  if (input) input.addEventListener(evt, () =>
+    onEvent({ type: 'update', id, field, value: input.type === 'checkbox' ? input.checked : input.value }));
 }
