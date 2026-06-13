@@ -165,7 +165,7 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
   border-color:var(--ac);
   box-shadow:0 0 0 3px var(--ac-glow);
 }
-.fg input::placeholder{color:var(--tx-muted)}
+.fg input::placeholder{color:var(--tx-dim)}
 .hint{font-size:.72rem;color:var(--tx-muted);margin-top:.25rem}
 .fg-hint{display:block;font-size:.72rem;color:var(--tx-muted);margin-top:.2rem}
 
