@@ -236,6 +236,16 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
 .paste-msg{font-size:.75rem;font-weight:500}
 .paste-msg.ok{color:var(--ok)} .paste-msg.err{color:var(--er)}
 
+/* ── Seal / Unseal ──────────────────────────────────────── */
+.seal-box{padding:.8rem;border-radius:var(--radius);border:1px solid var(--bd);background:var(--bg-card)}
+.seal-desc{font-size:.76rem;color:var(--tx-dim);margin:0 0 .6rem;line-height:1.5}
+.seal-input{flex:1;min-width:180px}
+.fg-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.seal-msg{font-size:.78rem;font-weight:500;display:inline-block;margin-top:.4rem}
+.seal-msg.loading{color:var(--accent)}
+.seal-msg.ok{color:var(--ok)}
+.seal-msg.err{color:var(--er)}
+
 /* ── Collected badge ───────────────────────────────────── */
 .collected-badge{
   font-size:.6rem;font-weight:600;color:var(--ok);

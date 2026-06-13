@@ -1,7 +1,7 @@
 // pages/bootstrap.js
 // 职责：冷启动页 — 种子自举 + 集群扩张双 tab
-// 种子 tab：单节点，推 HCL → CI → curl（暗夜下蛋）
-// 扩张 tab：OIDC 登录后，用通用 join 脚本加入集群
+// 种子 tab：单节点，推 HCL → CI → curl（暗夜下蛋），完成后设密码封存
+// 扩张 tab：密码解密 sealed.bin → 粘贴 collect JSON → 生成 join 命令
 
 import * as Crypto  from '../lib/crypto.js';
 import * as Topo    from '../lib/topology.js';
@@ -215,59 +215,153 @@ async function _generateSeed(status, CFG) {
     details.className = 'hcl-details';
     details.innerHTML = `<summary>${t('bs.hcl.title')}</summary><pre class="hcl-preview">${esc(hcl)}</pre>`;
     out.appendChild(details);
+
+    // Seal section — encrypt seed IP + gossip key with cluster password
+    const sealDiv = document.createElement('div');
+    sealDiv.id = 'seal-section';
+    sealDiv.style.marginTop = '1rem';
+    out.appendChild(sealDiv);
+    _renderSealSection(sealDiv, gossipKey, _seedNode.ip, creds.githubPat, repo, branch);
+
   } catch (err) {
     Output.showStatus(status, `${t('bs.output.error')}: ${err.message}`, 'err');
   }
 }
 
+// ── Seal section (after seed generate) ──────────────────
+
+function _renderSealSection(container, gossipKey, seedIP, pat, repo, branch) {
+  container.innerHTML = `
+    <div class="section-divider"></div>
+    <h4>${t('bs.seal.title')}</h4>
+    <p class="seal-desc">${t('bs.seal.desc')}</p>
+    <div class="fg-row">
+      <input type="password" id="seal-password" class="seal-input" placeholder="${t('bs.seal.placeholder')}">
+      <button class="btn btn-primary" id="btn-seal">${t('bs.seal.btn')}</button>
+    </div>
+    <span id="seal-msg"></span>`;
+
+  const msg = (text, cls) => {
+    const el = document.getElementById('seal-msg');
+    if (el) { el.textContent = text; el.className = `seal-msg ${cls}`; }
+  };
+
+  document.getElementById('btn-seal').addEventListener('click', async () => {
+    const pw = document.getElementById('seal-password').value;
+    if (pw.length < 8) { msg(t('bs.seal.errShort'), 'err'); return; }
+
+    msg(t('bs.seal.pushing'), 'loading');
+    try {
+      const payload = JSON.stringify({ seed_ip: seedIP, gossip_key: gossipKey, ts: Date.now() });
+      const cipher = await Crypto.seal(payload, pw);
+
+      await GitHub.pushFiles(pat, repo, branch,
+        [{ path: 'cluster/sealed.bin', content: cipher, mode: '100644' }],
+        'seal: cluster credentials');
+
+      // Cache locally as fallback
+      localStorage.setItem('anvil_seed_ip', seedIP);
+      localStorage.setItem('anvil_gossip_key', gossipKey);
+
+      msg(t('bs.seal.ok'), 'ok');
+    } catch (e) {
+      msg(`${t('bs.seal.errPush')}: ${e.message}`, 'err');
+    }
+  });
+}
+
 // ── Expansion tab ─────────────────────────────────────────
 
 function _renderExpansion(container, status, CFG) {
-  const loggedIn = Auth.isLoggedIn();
-
-  if (!loggedIn) {
-    container.innerHTML = `
-      <div class="empty" style="padding:2rem">
-        <div class="empty-icon">🔑</div>
-        <div class="empty-title">${t('bs.exp.loginRequired')}</div>
-        <div class="empty-desc">${t('bs.exp.loginHint')}</div>
-      </div>`;
-    return;
-  }
-
-  const user = Auth.userName();
-  const seedIP = localStorage.getItem('anvil_seed_ip') || '';
-  const gossipKey = localStorage.getItem('anvil_gossip_key') || '';
-
-  if (!gossipKey || !seedIP) {
-    container.innerHTML = `
-      <div class="empty" style="padding:2rem">
-        <div class="empty-icon">⚠️</div>
-        <div class="empty-title">${t('bs.exp.noSeed')}</div>
-        <div class="empty-desc">${t('bs.exp.noSeedHint')}</div>
-      </div>`;
-    return;
-  }
-
-  const fields = _expansionFields;
-  const hasCollected = !!fields;
+  const repo = CFG.repo || localStorage.getItem('anvil_repo') || 'k3s-forge/nomad-gitops';
+  const branch = CFG.branch || localStorage.getItem('anvil_branch') || 'main';
 
   container.innerHTML = `
-    <h3>${t('bs.heading')} — ${esc(user)}</h3>
+    <h3>🥈 ${t('bs.tab.expansion')}</h3>
+    <div id="exp-pw-section"></div>
+    <div id="exp-form-section" style="display:none"></div>`;
+
+  _renderUnsealSection(document.getElementById('exp-pw-section'), repo, branch,
+    (seedIP, gossipKey) => {
+      _renderExpansionForm(document.getElementById('exp-form-section'), seedIP, gossipKey, repo, branch, status);
+    });
+}
+
+function _renderUnsealSection(container, repo, branch, onDecrypted) {
+  const savedPw = localStorage.getItem('anvil_cluster_pw') || '';
+
+  container.innerHTML = `
+    <div class="seal-box">
+      <h4>${t('bs.exp.pw.title')}</h4>
+      <p class="seal-desc">${t('bs.exp.pw.desc')}</p>
+      <div class="fg-row">
+        <input type="password" id="exp-password" class="seal-input" placeholder="${t('bs.exp.pw.placeholder')}" value="${esc(savedPw)}">
+        <button class="btn btn-primary" id="btn-unseal">${t('bs.exp.pw.btn')}</button>
+      </div>
+      <span id="unseal-msg"></span>
+    </div>`;
+
+  const msg = (text, cls) => {
+    const el = document.getElementById('unseal-msg');
+    if (el) { el.textContent = text; el.className = `seal-msg ${cls}`; }
+  };
+
+  document.getElementById('btn-unseal').addEventListener('click', async () => {
+    const pw = document.getElementById('exp-password').value;
+    if (!pw) return;
+
+    msg(t('bs.exp.pw.decrypting'), 'loading');
+
+    try {
+      const url = `https://raw.githubusercontent.com/${repo}/${branch}/cluster/sealed.bin`;
+      const resp = await fetch(url);
+      if (!resp.ok) { msg(t('bs.exp.pw.noBin'), 'err'); return; }
+
+      const cipher = await resp.text();
+      const plain = await Crypto.unseal(cipher.trim(), pw);
+      const data = JSON.parse(plain);
+
+      localStorage.setItem('anvil_cluster_pw', pw);
+      localStorage.setItem('anvil_seed_ip', data.seed_ip);
+      localStorage.setItem('anvil_gossip_key', data.gossip_key);
+
+      msg(t('bs.exp.pw.ok').replace('{ip}', data.seed_ip), 'ok');
+
+      // Activate form section
+      setTimeout(() => onDecrypted(data.seed_ip, data.gossip_key), 400);
+    } catch (e) {
+      msg(t('bs.exp.pw.err'), 'err');
+    }
+  });
+
+  // Enter key to trigger decrypt
+  container.querySelector('#exp-password')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-unseal')?.click();
+  });
+}
+
+function _renderExpansionForm(container, seedIP, gossipKey, repo, branch, status) {
+  const f = _expansionFields || {};
+  const collected = f._collected
+    ? `<span class="collected-badge" title="${_collectedTitle(f)}">✓ ${t('bs.collected')}</span>`
+    : '';
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="section-divider"></div>
+    <div class="status status-ok" style="margin-bottom:.8rem">🔓 Seed: <code>${esc(seedIP)}</code></div>
     <div id="exp-paste-area"></div>
     <div id="exp-form"></div>
     <div class="section-divider"></div>
-    <div class="fg"><label>${t('bs.exp.seedIP')}</label>
-      <input type="text" id="exp-seed-ip" value="${esc(seedIP)}" readonly class="readonly"></div>
     <button class="btn btn-primary btn-lg" id="btn-generate-exp">${t('bs.exp.btn.join')}</button>`;
 
-  _renderPasteArea(document.getElementById('exp-paste-area'), f => {
-    _expansionFields = f;
-    _renderExpansion(container, status, CFG);
+  _renderPasteArea(document.getElementById('exp-paste-area'), fields => {
+    _expansionFields = fields;
+    _renderExpansionForm(container, seedIP, gossipKey, repo, branch, status);
   });
 
   _renderExpForm(document.getElementById('exp-form'));
-  document.getElementById('btn-generate-exp').addEventListener('click', () => _generateExp(status));
+  document.getElementById('btn-generate-exp').addEventListener('click', () => _generateExpJoin(seedIP, gossipKey, repo, branch, status));
 }
 
 function _renderExpForm(container) {
@@ -309,20 +403,10 @@ function _renderExpForm(container) {
   });
 }
 
-function _generateExp(status) {
+function _generateExpJoin(seedIP, gossipKey, repo, branch, status) {
   const f = _expansionFields;
   if (!f) {
     Output.showStatus(status, t('bs.exp.noCollect'), 'err');
-    return;
-  }
-
-  const seedIP = localStorage.getItem('anvil_seed_ip') || '';
-  const gossipKey = localStorage.getItem('anvil_gossip_key') || '';
-  const repo = localStorage.getItem('anvil_repo') || 'k3s-forge/nomad-gitops';
-  const branch = localStorage.getItem('anvil_branch') || 'main';
-
-  if (!gossipKey || !seedIP) {
-    Output.showStatus(status, t('bs.exp.noSeed'), 'err');
     return;
   }
 
@@ -351,7 +435,6 @@ function _generateExp(status) {
     cmd,
   }]);
 
-  // Note
   const note = document.createElement('div');
   note.className = 'status status-ok';
   note.style.marginTop = '.8rem';

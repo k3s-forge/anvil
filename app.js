@@ -4,7 +4,7 @@
 // 页面渲染委托给 pages/
 // 全局状态仅此文件持有
 
-const BUILD = '16';
+const BUILD = '17';
 
 import * as OIDC      from './lib/oidc.js';
 import * as Auth      from './lib/auth.js';
