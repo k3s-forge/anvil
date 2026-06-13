@@ -136,27 +136,40 @@ else
     elif command -v dnf >/dev/null 2>&1; then {D}SUDO dnf install -y chrony >/dev/null 2>&1 || warn "chrony dnf failed"
     elif command -v yum >/dev/null 2>&1; then {D}SUDO yum install -y chrony >/dev/null 2>&1 || warn "chrony yum failed"
     fi
-    # Minimal chrony.conf — pool.ntp.org + allow local
+    # Minimal chrony.conf — NTS preferred, pool fallback
     cat > /etc/chrony/chrony.conf <<'EOF'
-pool 2.pool.ntp.org iburst
+server time.cloudflare.com iburst nts
+server nts.netnod.se      iburst nts
+pool   2.pool.ntp.org     iburst maxsources 2
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
+rtconutc
+port 0
 EOF
     {D}SUDO systemctl enable chrony 2>/dev/null || {D}SUDO systemctl enable chronyd 2>/dev/null || true
     {D}SUDO systemctl restart chrony 2>/dev/null || {D}SUDO systemctl restart chronyd 2>/dev/null || true
     timedatectl set-ntp true 2>/dev/null || true
+    # Verify sync
+    sleep 2
+    chronyc tracking 2>/dev/null | grep -q "Reference ID" && ok "chrony NTP synced" || warn "chrony may still be syncing"
   else
     # FreeBSD: chrony from pkg
     pkg install -y chrony >/dev/null 2>&1 || warn "chrony pkg failed"
     cat > /usr/local/etc/chrony.conf <<'EOF'
-pool 2.pool.ntp.org iburst
+server time.cloudflare.com iburst nts
+server nts.netnod.se      iburst nts
+pool   2.pool.ntp.org     iburst maxsources 2
 driftfile /var/db/chrony/drift
 makestep 1.0 3
 rtcsync
+rtconutc
+port 0
 EOF
     sysrc chronyd_enable=YES 2>/dev/null || true
     service chronyd restart 2>/dev/null || true
+    sleep 2
+    chronyc tracking 2>/dev/null | grep -q "Reference ID" && ok "chrony NTP synced" || warn "chrony may still be syncing"
   fi
   ok "chrony NTP synced"
 fi

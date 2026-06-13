@@ -70,26 +70,37 @@ if [[ {D}IS_LINUX -eq 1 ]]; then
   elif command -v dnf >/dev/null 2>&1; then {D}SUDO dnf install -y chrony >/dev/null 2>&1 || true
   elif command -v yum >/dev/null 2>&1; then {D}SUDO yum install -y chrony >/dev/null 2>&1 || true; fi
   cat > /etc/chrony/chrony.conf <<'CHRONYEOF'
-pool 2.pool.ntp.org iburst
+server time.cloudflare.com iburst nts
+server nts.netnod.se      iburst nts
+pool   2.pool.ntp.org     iburst maxsources 2
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
+rtconutc
+port 0
 CHRONYEOF
   {D}SUDO systemctl enable chrony 2>/dev/null || {D}SUDO systemctl enable chronyd 2>/dev/null || true
   {D}SUDO systemctl restart chrony 2>/dev/null || {D}SUDO systemctl restart chronyd 2>/dev/null || true
   timedatectl set-ntp true 2>/dev/null || true
+  sleep 2
+  chronyc tracking 2>/dev/null | grep -q "Reference ID" && ok "chrony NTP synced" || warn "chrony may still be syncing"
 else
   pkg install -y chrony >/dev/null 2>&1 || true
   cat > /usr/local/etc/chrony.conf <<'CHRONYEOF'
-pool 2.pool.ntp.org iburst
+server time.cloudflare.com iburst nts
+server nts.netnod.se      iburst nts
+pool   2.pool.ntp.org     iburst maxsources 2
 driftfile /var/db/chrony/drift
 makestep 1.0 3
 rtcsync
+rtconutc
+port 0
 CHRONYEOF
   sysrc chronyd_enable=YES 2>/dev/null || true
   service chronyd restart 2>/dev/null || true
+  sleep 2
+  chronyc tracking 2>/dev/null | grep -q "Reference ID" && ok "chrony NTP synced" || warn "chrony may still be syncing"
 fi
-ok "chrony NTP synced"
 
 # ---- SSH Hardening ----
 _ssh_harden() {
@@ -235,26 +246,37 @@ log "installing chrony..."
     elif command -v dnf >/dev/null 2>&1; then {D}SUDO dnf install -y chrony >/dev/null 2>&1 || true
     elif command -v yum >/dev/null 2>&1; then {D}SUDO yum install -y chrony >/dev/null 2>&1 || true; fi
     cat > /etc/chrony/chrony.conf <<'CHRONYEOF'
-pool 2.pool.ntp.org iburst
+server time.cloudflare.com iburst nts
+server nts.netnod.se      iburst nts
+pool   2.pool.ntp.org     iburst maxsources 2
 driftfile /var/lib/chrony/drift
 makestep 1.0 3
 rtcsync
+rtconutc
+port 0
 CHRONYEOF
     {D}SUDO systemctl enable chrony 2>/dev/null || {D}SUDO systemctl enable chronyd 2>/dev/null || true
     {D}SUDO systemctl restart chrony 2>/dev/null || {D}SUDO systemctl restart chronyd 2>/dev/null || true
     timedatectl set-ntp true 2>/dev/null || true
+    sleep 2
+    chronyc tracking 2>/dev/null | grep -q "Reference ID" && ok "chrony NTP synced" || warn "chrony may still be syncing"
   else
     pkg install -y chrony >/dev/null 2>&1 || true
     cat > /usr/local/etc/chrony.conf <<'CHRONYEOF'
-pool 2.pool.ntp.org iburst
+server time.cloudflare.com iburst nts
+server nts.netnod.se      iburst nts
+pool   2.pool.ntp.org     iburst maxsources 2
 driftfile /var/db/chrony/drift
 makestep 1.0 3
 rtcsync
+rtconutc
+port 0
 CHRONYEOF
     sysrc chronyd_enable=YES 2>/dev/null || true
     service chronyd restart 2>/dev/null || true
+    sleep 2
+    chronyc tracking 2>/dev/null | grep -q "Reference ID" && ok "chrony NTP synced" || warn "chrony may still be syncing"
   fi
-  ok "chrony NTP synced"
 
 # ---- SSH Hardening ----
 _ssh_harden() {
