@@ -28,8 +28,9 @@ const PAGES = {
 const CFG = {
   repo:   localStorage.getItem('anvil_repo')   || 'k3s-forge/nomad-gitops',
   branch: localStorage.getItem('anvil_branch') || 'main',
-  oidcIssuer:   localStorage.getItem('anvil_oidc_issuer')   || '',
-  oidcClientId: localStorage.getItem('anvil_oidc_client_id') || '',
+  nomadUrl:      localStorage.getItem('anvil_nomad_url')      || '',
+  oidcIssuer:    localStorage.getItem('anvil_oidc_issuer')    || '',
+  oidcClientId:  localStorage.getItem('anvil_oidc_client_id') || '',
 };
 
 // ---- 全局状态 ----

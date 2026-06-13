@@ -5,7 +5,7 @@
 import { html as esc, attr as escAttr } from '../lib/escape.js';
 import { t } from '../lib/i18n.js';
 
-export function renderCommands(container, commands, statusEl) {
+export function renderCommands(container, commands) {
   if (!commands.length) {
     container.innerHTML = `<div class="empty"><p>${t('common.empty')}</p></div>`;
     return;

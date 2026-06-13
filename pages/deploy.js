@@ -9,11 +9,14 @@ import * as DeployUI from '../ui/deploy.js';
 import * as Output  from '../ui/output.js';
 import { html as esc } from '../lib/escape.js';
 
+let _cfg = {};
+
 function nomadUrl() {
-  return localStorage.getItem('anvil_nomad_url') || 'http://localhost:4647';
+  return _cfg.nomadUrl || 'http://localhost:4647';
 }
 
 export function render(main, status, CFG) {
+  _cfg = CFG;
   if (!Auth.isLoggedIn()) {
     main.innerHTML = `
       <div class="empty"><div class="empty-icon">🔑</div>

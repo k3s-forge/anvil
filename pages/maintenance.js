@@ -25,7 +25,7 @@ export function render(main, status, CFG) {
         <div class="fg-inline">
           <label>Nomad API</label>
           <input type="text" id="mt-nomad-url"
-            value="${esc(localStorage.getItem('anvil_nomad_url') || '')}"
+            value="${esc(CFG.nomadUrl)}"
             placeholder="http://<seed>:4647" style="width:220px">
           <button class="btn" id="mt-refresh">刷新</button>
         </div>
