@@ -5,6 +5,7 @@
 // 输出：DOM 更新，事件通过回调通知父组件
 
 import { html as esc } from '../lib/escape.js';
+import { t } from '../lib/i18n.js';
 
 export function render(container, nodes, onEvent) {
   container.innerHTML = '';
@@ -18,32 +19,29 @@ export function render(container, nodes, onEvent) {
     row.className = `node-row${isSeed ? ' node-seed' : ''}`;
     row.dataset.id = n._id;
 
-    // 种子 Server 标记
-    const badge = isSeed ? '<span class="seed-badge">🔑 种子</span>' : '';
+    const badge = isSeed ? `<span class="seed-badge">${t('bs.seed.badge')}</span>` : '';
 
-    // join 字段：非种子 Server 显示，自动填入种子 IP
     const joinField = (!isSeed && n.role === 'server')
-      ? `<div class="fg fg-join"><label>加入</label>
+      ? `<div class="fg fg-join"><label>${t('bs.node.join')}</label>
            <input type="text" class="nf-join" value="${esc(seed.ip || '')}" readonly
-                  title="自动加入种子节点"></div>`
+                  title="${t('bs.node.join')}"></div>`
       : '';
 
     row.innerHTML = `
-      <div class="fg fg-name"><label>节点名 ${badge}</label>
+      <div class="fg fg-name"><label>${t('bs.node.name')} ${badge}</label>
         <input type="text" class="nf-name" value="${esc(n.name)}" placeholder="seed-1"></div>
-      <div class="fg fg-ip"><label>IP</label>
+      <div class="fg fg-ip"><label>${t('bs.node.ip')}</label>
         <input type="text" class="nf-ip" value="${esc(n.ip)}" placeholder="x.x.x.x"></div>
       ${isSeed
-        ? '<div class="fg fg-role"><label>角色</label><div class="seed-role-locked">Server</div></div>'
-        : `<div class="fg fg-role"><label>角色</label>
+        ? `<div class="fg fg-role"><label>${t('bs.node.role')}</label><div class="seed-role-locked">${t('bs.seed.role')}</div></div>`
+        : `<div class="fg fg-role"><label>${t('bs.node.role')}</label>
              <select class="nf-role">
-               <option value="server" ${n.role==='server'?'selected':''}>Server</option>
-               <option value="client" ${n.role==='client'?'selected':''}>Client</option>
+               <option value="server" ${n.role==='server'?'selected':''}>${t('bs.role.server')}</option>
+               <option value="client" ${n.role==='client'?'selected':''}>${t('bs.role.client')}</option>
              </select></div>`}
       ${joinField}
-      ${!isSeed ? '<button class="btn btn-sm btn-danger nf-rm" title="移除">✕</button>' : ''}`;
+      ${!isSeed ? `<button class="btn btn-sm btn-danger nf-rm" title="${t('bs.node.remove')}">✕</button>` : ''}`;
 
-    // 事件绑定：name, ip, role
     const nameEl = row.querySelector('.nf-name');
     const ipEl = row.querySelector('.nf-ip');
     const roleEl = row.querySelector('.nf-role');
@@ -55,7 +53,6 @@ export function render(container, nodes, onEvent) {
     if (roleEl) roleEl.addEventListener('change', () =>
       onEvent({ type: 'update', id: n._id, field: 'role', value: roleEl.value }));
 
-    // 删除按钮
     const rmEl = row.querySelector('.nf-rm');
     if (rmEl) rmEl.addEventListener('click', () =>
       onEvent({ type: 'remove', id: n._id }));
@@ -65,7 +62,7 @@ export function render(container, nodes, onEvent) {
 
   const add = document.createElement('button');
   add.className = 'btn btn-sm topo-add-btn';
-  add.textContent = '+ 添加节点';
+  add.textContent = t('bs.node.add');
   add.addEventListener('click', () => onEvent({ type: 'add' }));
   container.appendChild(add);
 }

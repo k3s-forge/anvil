@@ -3,19 +3,20 @@
 // 纯视图函数
 
 import { html as esc, attr as escAttr } from '../lib/escape.js';
+import { t } from '../lib/i18n.js';
 
 export function renderCommands(container, commands, statusEl) {
   if (!commands.length) {
-    container.innerHTML = '<div class="empty"><p>无命令</p></div>';
+    container.innerHTML = `<div class="empty"><p>${t('common.empty')}</p></div>`;
     return;
   }
 
   container.innerHTML = commands.map((c, i) => `
     <div class="cmd-block">
-      <div class="cmd-label">${c.isSeed ? '🥇 步骤 1 · 种子' : `🥈 步骤 ${i+1} · 加入`}
+      <div class="cmd-label">${c.isSeed ? t('bs.cmd.seed') : t('bs.cmd.join', {n: i+1})}
         — ${esc(c.name)}</div>
-      <pre class="cmd-pre" data-cmd="${escAttr(c.cmd)}"><span class="copy-hint">点击复制</span>${esc(c.cmd)}</pre>
-      <div class="cmd-note">${c.isSeed ? '⚠️ 必须先执行此命令，否则后续节点无法加入' : '种子机启动后再执行此命令'}</div>
+      <pre class="cmd-pre" data-cmd="${escAttr(c.cmd)}"><span class="copy-hint">${t('bs.cmd.copy')}</span>${esc(c.cmd)}</pre>
+      <div class="cmd-note">${c.isSeed ? t('bs.cmd.seedNote') : t('bs.cmd.joinNote')}</div>
     </div>`).join('');
 
   container.querySelectorAll('.cmd-pre').forEach(pre => {
@@ -23,8 +24,8 @@ export function renderCommands(container, commands, statusEl) {
       const cmd = pre.dataset.cmd;
       navigator.clipboard.writeText(cmd).then(() => {
         const hint = pre.querySelector('.copy-hint');
-        hint.textContent = '✓ 已复制';
-        setTimeout(() => hint.textContent = '点击复制', 1500);
+        hint.textContent = t('bs.cmd.copied');
+        setTimeout(() => hint.textContent = t('bs.cmd.copy'), 1500);
       });
     });
   });

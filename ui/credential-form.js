@@ -2,22 +2,24 @@
 // 职责：凭证表单渲染 + 读取
 // 无状态视图
 
+import { t } from '../lib/i18n.js';
+
 export function render(container) {
   container.innerHTML = `
     <div class="fg">
-      <label>Gossip 加密密钥 <span class="hint">(留空自动生成，永不离开浏览器)</span></label>
-      <input type="password" id="cfg-gossip-key" placeholder="留空自动生成 32 字节随机密钥">
+      <label>${t('bs.gossip.label')} <span class="hint">(${t('bs.gossip.hint')})</span></label>
+      <input type="password" id="cfg-gossip-key" placeholder="${t('bs.gossip.hint')}">
     </div>
     <div class="fg">
-      <label>GitHub PAT <span class="hint">(repo → Settings → Developer settings → PAT → Contents: RW)</span></label>
+      <label>${t('bs.github.label')} <span class="hint">(${t('bs.github.hint')})</span></label>
       <input type="password" id="cfg-github-pat" placeholder="ghp_... 或 github_pat_...">
     </div>
     <div class="fg">
-      <label>仓库</label>
+      <label>${t('bs.repo.label')}</label>
       <input type="text" id="cfg-repo" value="k3s-forge/nomad-gitops" placeholder="owner/repo">
     </div>
     <div class="fg">
-      <label>分支</label>
+      <label>${t('bs.branch.label')}</label>
       <input type="text" id="cfg-branch" value="main" placeholder="main">
     </div>`;
 }

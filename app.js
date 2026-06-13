@@ -4,13 +4,15 @@
 // 页面渲染委托给 pages/
 // 全局状态仅此文件持有
 
-const BUILD = '13';
+const BUILD = '15';
 
-import * as OIDC    from './lib/oidc.js';
-import * as Auth    from './lib/auth.js';
-import * as Output  from './ui/output.js';
-import * as LoginUI from './ui/login.js';
-import * as Settings from './ui/settings.js';
+import * as OIDC      from './lib/oidc.js';
+import * as Auth      from './lib/auth.js';
+import * as Output    from './ui/output.js';
+import * as LoginUI   from './ui/login.js';
+import * as Settings  from './ui/settings.js';
+import { t, detect }  from './lib/i18n.js';
+import { initTheme as _initTheme } from './ui/settings.js';
 import { html as esc } from './lib/escape.js';
 
 // 页面模块按需动态加载（BUILD 穿透浏览器模块缓存）
@@ -35,14 +37,17 @@ window._anvil = { CFG, page: 'bootstrap' };
 
 // ---- 入口 ----
 export function init() {
+  _initTheme();
   _checkOIDCCallback();
   _renderShell();
   window._anvil.page = _getPageFromHash();
+  _renderNav();
   _renderPage();
   window.addEventListener('hashchange', () => {
     const next = _getPageFromHash();
     if (next !== window._anvil.page) {
       window._anvil.page = next;
+      _renderNav();
       _renderPage();
     }
   });
@@ -67,7 +72,7 @@ async function _checkOIDCCallback() {
     Auth.save(tokens);
   } catch (err) {
     Output.showStatus(document.getElementById('status-area'),
-      `OIDC 登录失败: ${err.message}`, 'err');
+      t('common.oidcFail') + ': ' + err.message, 'err');
   }
   history.replaceState(null, '', window.location.pathname);
 }
@@ -79,7 +84,7 @@ function _renderShell() {
       <div class="nav-brand"><span class="nav-logo">◆</span> anvil</div>
       <div class="nav-links" id="nav-links"></div>
       <div class="nav-user" id="nav-user"></div>
-      <button class="btn btn-icon" id="btn-settings" title="设置">⚙️</button>
+      <button class="btn btn-icon" id="btn-settings" title="${t('set.title')}">⚙️</button>
     </nav>
     <main id="main" class="container"></main>
     <div id="status-area"></div>`;
@@ -91,13 +96,13 @@ function _renderShell() {
 function _renderNav() {
   const p = window._anvil.page;
   const items = [
-    { id: 'bootstrap', label: '🚀 冷启动' },
-    { id: 'deploy',    label: '📦 Job 提交' },
+    { id: 'bootstrap', label: t('nav.bootstrap') },
+    { id: 'deploy',    label: t('nav.deploy') },
   ];
   if (Auth.role() === 'admin') items.push(
-    { id: 'approval',    label: '📋 审批' },
-    { id: 'maintenance', label: '🔧 维护' },
-    { id: 'audit',       label: '📊 审计' }
+    { id: 'approval',    label: t('nav.approval') },
+    { id: 'maintenance', label: t('nav.maintenance') },
+    { id: 'audit',       label: t('nav.audit') }
   );
 
   document.getElementById('nav-links').innerHTML = items.map(i =>

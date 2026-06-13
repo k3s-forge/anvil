@@ -590,3 +590,84 @@ input:disabled,select:disabled{
 
 /* ── Form hint (global) ───────────────────────────────── */
 .fg .hint{display:inline;font-size:.7rem;color:var(--tx-muted);font-weight:400}
+
+/* ══════════════════════════════════════════════════════════
+   Light Theme
+   ══════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg:        #f5f5f7;
+  --bg-elev:   #ffffff;
+  --bg-card:   #ffffff;
+  --bg-input:  #e8e8ed;
+  --bd:        #d2d2d7;
+  --bd-hover:  #aeaeb2;
+  --tx:        #1d1d1f;
+  --tx-dim:    #6e6e73;
+  --tx-muted:  #aeaeb2;
+  --ac:        #0071e3;
+  --ac-glow:   rgba(0,113,227,.15);
+  --ok:        #248a3d;
+  --ok-glow:   rgba(36,138,61,.15);
+  --warn:      #b87a00;
+  --warn-glow: rgba(184,122,0,.15);
+  --er:        #c73a2f;
+  --er-glow:   rgba(199,58,47,.15);
+  --shd:       0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.06);
+  --shd-card:  0 1px 3px rgba(0,0,0,.04),0 4px 16px rgba(0,0,0,.06);
+}
+[data-theme="light"] body{background:var(--bg)}
+[data-theme="light"] .nav{
+  background:rgba(255,255,255,.72);
+  border-bottom:1px solid rgba(0,0,0,.08);
+}
+[data-theme="light"] .nav-brand{color:var(--tx)}
+[data-theme="light"] .cmd-pre{background:#1d1d1f;color:#30d158}
+[data-theme="light"] .node-seed{background:rgba(0,113,227,.04)}
+[data-theme="light"] .seed-role-locked{background:rgba(0,113,227,.06);border-color:rgba(0,113,227,.15)}
+[data-theme="light"] .fg-join input[readonly]{background:rgba(0,0,0,.02)}
+[data-theme="light"] .hcl-preview{background:var(--bg-input)}
+[data-theme="light"] .modal-overlay{background:rgba(0,0,0,.3)}
+[data-theme="light"] .modal{background:var(--bg-elev)}
+[data-theme="light"] .status-info,
+[data-theme="light"] .status-ok,
+[data-theme="light"] .status-err{color:var(--tx)}
+[data-theme="light"] ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15)}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25)}
+
+/* ══════════════════════════════════════════════════════════
+   Apple-grade Animations
+   ══════════════════════════════════════════════════════════ */
+@keyframes scaleIn{
+  from{opacity:0;transform:scale(.96) translateY(4px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
+@keyframes fadeIn{
+  from{opacity:0} to{opacity:1}
+}
+@keyframes slideUp{
+  from{opacity:0;transform:translateY(12px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.card,.coldstart-left,.coldstart-right,.node-row,.cmd-block,.modal{
+  animation:scaleIn .3s cubic-bezier(.22,.61,.36,1);
+}
+.node-row:nth-child(2){animation-delay:.03s}
+.node-row:nth-child(3){animation-delay:.06s}
+.node-row:nth-child(4){animation-delay:.09s}
+.node-row:nth-child(5){animation-delay:.12s}
+
+/* ── Theme toggle in settings ─────────────────────────── */
+.theme-switch,.lang-switch{
+  display:flex;gap:.35rem;margin-bottom:.25rem;
+}
+.theme-switch button,.lang-switch button{
+  flex:1;padding:.45rem .5rem;font-size:.78rem;
+  border-radius:var(--radius-sm);border:1px solid var(--bd);
+  background:var(--bg-input);color:var(--tx-dim);
+  cursor:pointer;transition:all .15s;font-family:var(--font);
+}
+.theme-switch button.active,.lang-switch button.active{
+  background:var(--ac);color:#fff;border-color:var(--ac);
+}
+.theme-switch button:hover:not(.active),
+.lang-switch button:hover:not(.active){color:var(--tx);border-color:var(--bd-hover)}
