@@ -74,7 +74,7 @@ function _renderShell() {
       <div class="nav-links" id="nav-links"></div>
       <div class="nav-user" id="nav-user"></div>
     </nav>
-    <main id="main"></main>
+    <main id="main" class="container"></main>
     <div id="status-area"></div>`;
   _renderNav();
   _renderLogin();
