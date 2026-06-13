@@ -58,11 +58,38 @@ if [[ "{D}NODE_HOSTNAME" != "unknown" ]]; then
   ok "hostname: {D}NODE_HOSTNAME"
 fi
 
-# ---- Timezone ----
-[[ -n "{D}NODE_TZ" ]] && {
-  if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone "{D}NODE_TZ" 2>/dev/null || true
-  else tzsetup "{D}NODE_TZ" 2>/dev/null || true; fi
-  ok "tz: {D}NODE_TZ"; }
+# ---- Timezone & NTP (chrony) ----
+log "setting timezone: UTC (cluster standard)"
+if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone UTC 2>/dev/null || true
+else tzsetup UTC 2>/dev/null || true; fi
+ok "tz: UTC"
+
+log "installing chrony..."
+if [[ {D}IS_LINUX -eq 1 ]]; then
+  if command -v apt-get >/dev/null 2>&1; then {D}SUDO apt-get install -y chrony >/dev/null 2>&1 || true
+  elif command -v dnf >/dev/null 2>&1; then {D}SUDO dnf install -y chrony >/dev/null 2>&1 || true
+  elif command -v yum >/dev/null 2>&1; then {D}SUDO yum install -y chrony >/dev/null 2>&1 || true; fi
+  cat > /etc/chrony/chrony.conf <<'CHRONYEOF'
+pool 2.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+CHRONYEOF
+  {D}SUDO systemctl enable chrony 2>/dev/null || {D}SUDO systemctl enable chronyd 2>/dev/null || true
+  {D}SUDO systemctl restart chrony 2>/dev/null || {D}SUDO systemctl restart chronyd 2>/dev/null || true
+  timedatectl set-ntp true 2>/dev/null || true
+else
+  pkg install -y chrony >/dev/null 2>&1 || true
+  cat > /usr/local/etc/chrony.conf <<'CHRONYEOF'
+pool 2.pool.ntp.org iburst
+driftfile /var/db/chrony/drift
+makestep 1.0 3
+rtcsync
+CHRONYEOF
+  sysrc chronyd_enable=YES 2>/dev/null || true
+  service chronyd restart 2>/dev/null || true
+fi
+ok "chrony NTP synced"
 
 # ---- SSH Hardening ----
 _ssh_harden() {
@@ -197,9 +224,37 @@ else fail "unsupported OS"; fi
 [[ "{D}NODE_HOSTNAME" != "unknown" ]] && {
   if [[ {D}IS_LINUX -eq 1 ]]; then hostnamectl set-hostname "{D}NODE_HOSTNAME" 2>/dev/null || hostname "{D}NODE_HOSTNAME"
   else sysrc hostname="{D}NODE_HOSTNAME" 2>/dev/null || true; hostname "{D}NODE_HOSTNAME"; fi; }
-[[ -n "{D}NODE_TZ" ]] && {
-  if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone "{D}NODE_TZ" 2>/dev/null || true
-  else tzsetup "{D}NODE_TZ" 2>/dev/null || true; fi; }
+
+# ---- Timezone & NTP (chrony) ----
+log "setting timezone: UTC (cluster standard)"
+if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone UTC 2>/dev/null || true
+else tzsetup UTC 2>/dev/null || true; fi; ok "tz: UTC"
+log "installing chrony..."
+  if [[ {D}IS_LINUX -eq 1 ]]; then
+    if command -v apt-get >/dev/null 2>&1; then {D}SUDO apt-get install -y chrony >/dev/null 2>&1 || true
+    elif command -v dnf >/dev/null 2>&1; then {D}SUDO dnf install -y chrony >/dev/null 2>&1 || true
+    elif command -v yum >/dev/null 2>&1; then {D}SUDO yum install -y chrony >/dev/null 2>&1 || true; fi
+    cat > /etc/chrony/chrony.conf <<'CHRONYEOF'
+pool 2.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+CHRONYEOF
+    {D}SUDO systemctl enable chrony 2>/dev/null || {D}SUDO systemctl enable chronyd 2>/dev/null || true
+    {D}SUDO systemctl restart chrony 2>/dev/null || {D}SUDO systemctl restart chronyd 2>/dev/null || true
+    timedatectl set-ntp true 2>/dev/null || true
+  else
+    pkg install -y chrony >/dev/null 2>&1 || true
+    cat > /usr/local/etc/chrony.conf <<'CHRONYEOF'
+pool 2.pool.ntp.org iburst
+driftfile /var/db/chrony/drift
+makestep 1.0 3
+rtcsync
+CHRONYEOF
+    sysrc chronyd_enable=YES 2>/dev/null || true
+    service chronyd restart 2>/dev/null || true
+  fi
+  ok "chrony NTP synced"
 
 # ---- SSH Hardening ----
 _ssh_harden() {

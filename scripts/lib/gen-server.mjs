@@ -25,7 +25,7 @@ set -euo pipefail
 
 :{D}{NOMAD_VER:=1.9.6}
 :{D}{NODE_HOSTNAME:={HN}}
-:{D}{NODE_TZ:={TZ}}
+:{D}{NODE_TZ:=UTC}
 :{D}{NODE_IP:={NIP}}
 
 AUTO=0; REINSTALL=0; GOSSIP_KEY=""
@@ -119,19 +119,46 @@ else
 fi
 
 # ==================================================================
-#  4. Timezone
+#  4. Timezone — UTC enforced for cluster time consistency
 # ==================================================================
-banner "Timezone"
+banner "Timezone & NTP (chrony)"
 if [[ {D}SKIP_TZ -eq 1 ]]; then warn "skipped (--skip-tz)"
 else
-  if [[ {D}AUTO -eq 0 ]]; then
-    read -r -p "      Timezone [{D}NODE_TZ]: " input
-    [[ -n "{D}input" ]] && NODE_TZ="{D}input"
+  log "setting timezone: UTC (cluster standard)"
+  if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone UTC 2>/dev/null || true
+  else tzsetup UTC 2>/dev/null || true; fi
+  ok "Timezone: UTC"
+
+  # ── chrony (modern NTP, faster sync than ntpd) ──
+  log "installing chrony..."
+  if [[ {D}IS_LINUX -eq 1 ]]; then
+    if command -v apt-get >/dev/null 2>&1; then {D}SUDO apt-get install -y chrony >/dev/null 2>&1 || warn "chrony apt failed"
+    elif command -v dnf >/dev/null 2>&1; then {D}SUDO dnf install -y chrony >/dev/null 2>&1 || warn "chrony dnf failed"
+    elif command -v yum >/dev/null 2>&1; then {D}SUDO yum install -y chrony >/dev/null 2>&1 || warn "chrony yum failed"
+    fi
+    # Minimal chrony.conf — pool.ntp.org + allow local
+    cat > /etc/chrony/chrony.conf <<'EOF'
+pool 2.pool.ntp.org iburst
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+EOF
+    {D}SUDO systemctl enable chrony 2>/dev/null || {D}SUDO systemctl enable chronyd 2>/dev/null || true
+    {D}SUDO systemctl restart chrony 2>/dev/null || {D}SUDO systemctl restart chronyd 2>/dev/null || true
+    timedatectl set-ntp true 2>/dev/null || true
+  else
+    # FreeBSD: chrony from pkg
+    pkg install -y chrony >/dev/null 2>&1 || warn "chrony pkg failed"
+    cat > /usr/local/etc/chrony.conf <<'EOF'
+pool 2.pool.ntp.org iburst
+driftfile /var/db/chrony/drift
+makestep 1.0 3
+rtcsync
+EOF
+    sysrc chronyd_enable=YES 2>/dev/null || true
+    service chronyd restart 2>/dev/null || true
   fi
-  log "setting: {D}NODE_TZ"
-  if [[ {D}IS_LINUX -eq 1 ]]; then timedatectl set-timezone "{D}NODE_TZ" 2>/dev/null || true
-  else tzsetup "{D}NODE_TZ" 2>/dev/null || true; fi
-  ok "{D}NODE_TZ"
+  ok "chrony NTP synced"
 fi
 
 # ==================================================================
@@ -459,7 +486,7 @@ export function generate(node, cluster) {
     .replace(/\{NAME\}/g, node.name)
     .replace(/\{DC\}/g, dc)
     .replace(/\{HN\}/g, node.hostname || node.name)
-    .replace(/\{TZ\}/g, node.timezone || 'UTC')
+    .replace(/\{TZ\}/g, 'UTC')
     .replace(/\{OS\}/g, node.os || 'linux')
     .replace(/\{NET\}/g, net)
     .replace(/\{BBR\}/g, node.bbr !== false ? 'true' : 'false')
