@@ -98,7 +98,7 @@ export function open() {
     btn.addEventListener('click', () => {
       setLang(btn.dataset.lang);
       overlay.remove();
-      open(); // 重新打开以刷新文字
+      window.dispatchEvent(new CustomEvent('anvil:lang-changed'));
     });
   });
 
