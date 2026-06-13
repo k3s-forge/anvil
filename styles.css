@@ -174,7 +174,9 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
 
 /* ── Node Row ──────────────────────────────────────────── */
 .node-row{
-  display:grid;grid-template-columns:1.5fr 2fr 1.1fr auto;gap:.6rem;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.45rem .6rem;
   align-items:end;margin-bottom:.5rem;
   padding:.75rem .85rem;background:var(--bg-input);border-radius:var(--radius);
   border:1px solid var(--bd);transition:border-color .15s;
@@ -184,11 +186,11 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
 .node-row .fg label{font-size:.72rem;white-space:nowrap}
 .node-row .fg input,
 .node-row .fg select{
-  font-family:var(--font);padding:.55rem .65rem;font-size:.82rem;
+  font-family:var(--font);padding:.5rem .6rem;font-size:.82rem;
 }
-.node-row .nf-rm{align-self:center;margin-bottom:.2rem}
-@media(max-width:700px){.node-row{grid-template-columns:1fr 1fr;gap:.4rem}
-  .node-row .nf-rm{grid-column:span 2;justify-self:end}}
+.node-row .nf-rm{justify-self:start;align-self:center;margin-bottom:.15rem}
+@media(max-width:500px){.node-row{grid-template-columns:1fr}
+  .node-row .nf-rm{grid-column:1;justify-self:end}}
 
 /* ── Status ────────────────────────────────────────────── */
 .status{padding:.75rem 1rem;border-radius:var(--radius);margin:1rem 0;font-size:.85rem;font-weight:500}
