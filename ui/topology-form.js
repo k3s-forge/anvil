@@ -37,6 +37,8 @@ export function render(container, nodes, onEvent) {
     row.querySelector('.nf-rm').addEventListener('click', () => {
       onEvent({ type: 'remove', id: n._id });
     });
+
+    container.appendChild(row);
   }
 
   const add = document.createElement('button');
