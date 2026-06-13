@@ -118,9 +118,15 @@ body{
 .btn-ghost:hover{background:rgba(255,255,255,.04);color:var(--tx)}
 
 .btn-icon{
-  width:36px;height:36px;padding:0;border-radius:50%;
-  display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:none;color:var(--tx-dim);
+  font-size:1.1rem;padding:.3rem .5rem;cursor:pointer;
+  border-radius:var(--radius-sm);
 }
+.btn-icon:hover{color:var(--tx)}
+
+/* ── Settings Modal ───────────────────────────────────── */
+.settings-modal{max-width:520px}
+.settings-modal .modal-body{max-height:60vh;overflow-y:auto}
 
 /* ── Sections / Cards ──────────────────────────────────── */
 section{

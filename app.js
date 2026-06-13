@@ -4,12 +4,13 @@
 // 页面渲染委托给 pages/
 // 全局状态仅此文件持有
 
-const BUILD = '12';
+const BUILD = '13';
 
 import * as OIDC    from './lib/oidc.js';
 import * as Auth    from './lib/auth.js';
 import * as Output  from './ui/output.js';
 import * as LoginUI from './ui/login.js';
+import * as Settings from './ui/settings.js';
 import { html as esc } from './lib/escape.js';
 
 // 页面模块按需动态加载（BUILD 穿透浏览器模块缓存）
@@ -78,11 +79,13 @@ function _renderShell() {
       <div class="nav-brand"><span class="nav-logo">◆</span> anvil</div>
       <div class="nav-links" id="nav-links"></div>
       <div class="nav-user" id="nav-user"></div>
+      <button class="btn btn-icon" id="btn-settings" title="设置">⚙️</button>
     </nav>
     <main id="main" class="container"></main>
     <div id="status-area"></div>`;
   _renderNav();
   _renderLogin();
+  document.getElementById('btn-settings').addEventListener('click', () => Settings.open());
 }
 
 function _renderNav() {
