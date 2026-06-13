@@ -1,0 +1,39 @@
+{
+  "label": "Storage Volume Expand",
+  "description": "Expand a Nomad volume — requires CI compilation for topology validation",
+  "icon": "💾",
+  "requires_ci": true,
+  "required_role": "devops",
+  "params": [
+    {
+      "name": "name",
+      "label": "服务名",
+      "type": "text",
+      "required": true,
+      "default": "my-app"
+    },
+    {
+      "name": "volume_name",
+      "label": "Volume 名称",
+      "type": "text",
+      "required": true,
+      "default": "data",
+      "protected": true
+    },
+    {
+      "name": "size_gb",
+      "label": "新容量 (GB)",
+      "type": "number",
+      "required": true,
+      "default": "10",
+      "protected": true
+    },
+    {
+      "name": "datacenters",
+      "label": "数据中心",
+      "type": "text",
+      "required": true,
+      "default": "dc1"
+    }
+  ]
+}

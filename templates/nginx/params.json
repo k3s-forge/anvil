@@ -1,0 +1,11 @@
+{
+  "label": "Nginx",
+  "description": "静态 Web 服务器",
+  "icon": "🌐",
+  "required_role": "business",
+  "params": [
+    { "name": "service_name", "label": "服务名", "type": "string", "required": true, "description": "Nomad job 名称" },
+    { "name": "domain", "label": "域名", "type": "string", "required": true, "description": "对外访问域名" },
+    { "name": "port", "label": "端口", "type": "number", "default": "80", "protected": true, "description": "监听端口 (仅管理员可修改)" }
+  ]
+}

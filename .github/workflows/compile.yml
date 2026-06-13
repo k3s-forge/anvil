@@ -1,0 +1,60 @@
+# anvil — HCL 冷启动编译器
+# 触发：push bootstrap/pending/*.hcl
+# 流程：解析 HCL → 生成节点脚本 → 提交 → 部署 Pages
+
+name: Bootstrap Compile
+
+on:
+  push:
+    paths: ['bootstrap/pending/*.hcl']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: bootstrap-compile
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Compile HCL → Shell
+        run: |
+          mkdir -p bootstrap
+          for f in bootstrap/pending/*.hcl; do
+            [ -f "$f" ] || continue
+            echo "::group::$(basename "$f")"
+            node scripts/compile.mjs "$f" bootstrap/
+            echo "::endgroup::"
+          done
+
+      - name: Commit
+        run: |
+          git config user.name  "Bootstrap CI"
+          git config user.email "ci@nomad-bootstrap.local"
+          git add bootstrap/*.sh
+          rm -f bootstrap/pending/*.hcl
+          git add bootstrap/pending/
+          git diff --cached --quiet || git commit -m "bootstrap: compile $(date -u +%Y%m%d-%H%M)" && git push
+
+  deploy:
+    needs: compile
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: 'site' }
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,10 @@
+{
+  "label": "Hello Exec",
+  "description": "raw_exec 测试任务（FreeBSD Jail）",
+  "icon": "🔧",
+  "required_role": "business",
+  "params": [
+    { "name": "service_name", "label": "服务名", "type": "string", "required": true },
+    { "name": "message", "label": "输出消息", "type": "string", "default": "Hello from Anvil!" }
+  ]
+}
