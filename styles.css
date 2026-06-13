@@ -187,24 +187,13 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
 .status-ok{background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.2);color:var(--ok)}
 .status-err{background:rgba(255,69,58,.08);border:1px solid rgba(255,69,58,.2);color:var(--er)}
 
-/* ── Code / Command ────────────────────────────────────── */
-.cmd-block{background:var(--bg-input);border:1px solid var(--bd);border-radius:var(--radius);padding:1rem;margin-bottom:1rem}
-.cmd-label{color:var(--ac);font-weight:600;margin-bottom:.5rem;font-size:.85rem}
-.cmd-pre{
-  background:#000;color:var(--ok);padding:.85rem;border-radius:var(--radius-sm);
-  overflow-x:auto;font-family:var(--mono);font-size:.78rem;
-  white-space:pre-wrap;word-break:break-all;cursor:pointer;position:relative;
-  border:1px solid rgba(48,209,88,.12);
-}
-.cmd-pre:hover{border-color:rgba(48,209,88,.25)}
+/* ── Code snippet ──────────────────────────────────────── */
 .copy-hint{
   position:absolute;top:.5rem;right:.5rem;
   background:rgba(255,255,255,.06);color:var(--tx-dim);
   padding:.2rem .55rem;border-radius:4px;font-size:.7rem;
   font-family:var(--font);opacity:0;transition:opacity .15s;
 }
-.cmd-pre:hover .copy-hint{opacity:1}
-.cmd-note{color:var(--warn);font-size:.78rem;margin-top:.5rem}
 
 /* ── Deploy Layout ─────────────────────────────────────── */
 .deploy-layout{display:grid;grid-template-columns:250px 1fr;gap:1.25rem;min-height:420px}
@@ -213,6 +202,21 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
   background:var(--bg-card);border:1px solid var(--bd);
   border-radius:var(--radius-lg);padding:.5rem;
 }
+
+/* ── Approval Layout ──────────────────────────────────── */
+.approval-header{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;margin-bottom:1rem;flex-wrap:wrap;
+}
+.approval-header h3{margin:0}
+
+/* ── Audit Layout ─────────────────────────────────────── */
+.audit-layout{display:flex;flex-direction:column;gap:1.5rem}
+.audit-layout h3{margin-bottom:0}
+
+/* ── Maintenance Layout ───────────────────────────────── */
+.maint-layout{display:flex;flex-direction:column;gap:1.25rem}
+.maint-layout h3{margin-bottom:0}
 .deploy-main{
   background:var(--bg-card);border:1px solid var(--bd);
   border-radius:var(--radius-lg);padding:1.75rem;
@@ -436,20 +440,74 @@ input:disabled,select:disabled{
 .pill-system{background:rgba(255,159,10,.1);color:var(--warn)}
 .pill-batch{background:rgba(48,209,88,.1);color:var(--ok)}
 
-/* ── Key preview ───────────────────────────────────────── */
-.key-preview{margin-top:.3rem;font-size:.78rem;color:var(--ok);font-family:var(--mono)}
+/* ── Command blocks ───────────────────────────────────── */
+.cmd-block{
+  margin-bottom:1.25rem;padding-bottom:1.25rem;
+  border-bottom:1px solid var(--bd);
+}
+.cmd-block:last-child{border-bottom:none;margin-bottom:0}
+.cmd-label{
+  font-size:.82rem;color:var(--tx-dim);margin-bottom:.5rem;
+  font-weight:500;letter-spacing:-.01em;
+}
+.cmd-note{
+  font-size:.72rem;color:var(--tx-muted);margin-top:.4rem;
+}
+.cmd-pre{
+  background:var(--bg-code);color:var(--tx);padding:.75rem 1rem;
+  border-radius:6px;font-family:var(--mono);font-size:.78rem;
+  position:relative;cursor:pointer;user-select:all;
+  white-space:pre-wrap;word-break:break-all;
+  border:1px solid var(--bd);
+  transition:border-color .15s;
+}
+.cmd-pre:hover{border-color:var(--ac)}
+.cmd-pre .copy-hint{
+  position:absolute;top:.4rem;right:.6rem;
+  font-size:.65rem;color:var(--tx-muted);
+  background:var(--bg-card);padding:.1rem .4rem;
+  border-radius:3px;pointer-events:none;
+  font-family:var(--font);
+}
+
+/* ── HCL details ──────────────────────────────────────── */
+.hcl-details{
+  margin-top:1.5rem;padding-top:1rem;
+  border-top:1px solid var(--bd);
+}
+.hcl-details summary{
+  font-size:.8rem;color:var(--tx-dim);cursor:pointer;
+  user-select:none;margin-bottom:.5rem;
+}
+.hcl-details summary:hover{color:var(--tx)}
+.hcl-preview{
+  background:var(--bg-code);color:var(--tx-dim);
+  padding:.75rem 1rem;border-radius:6px;
+  font-family:var(--mono);font-size:.72rem;
+  border:1px solid var(--bd);
+  max-height:400px;overflow-y:auto;
+  white-space:pre-wrap;word-break:break-all;
+}
 
 /* ── Coldstart Layout ─────────────────────────────────── */
 .coldstart-layout{
-  display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;min-height:480px;
+  display:grid;
+  grid-template-columns:minmax(300px,5fr) minmax(360px,7fr);
+  gap:2rem;
+  min-height:480px;
+  align-items:start;
 }
-@media(max-width:720px){.coldstart-layout{grid-template-columns:1fr}}
+@media(max-width:940px){
+  .coldstart-layout{grid-template-columns:1fr;gap:1.5rem}
+}
 .coldstart-left,.coldstart-right{
   background:var(--bg-card);border:1px solid var(--bd);
   border-radius:var(--radius-lg);padding:1.75rem;
   box-shadow:var(--shd-card);
 }
-.coldstart-right{overflow-y:auto}
+.coldstart-left{position:sticky;top:1rem}
+.coldstart-right{overflow-y:auto;min-height:320px}
+.coldstart-right .empty{padding:2rem 0}
 
 /* ── Button variants ──────────────────────────────────── */
 .btn-lg{padding:.85rem 2rem;font-size:.95rem;font-weight:600;

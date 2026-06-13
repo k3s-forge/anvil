@@ -28,7 +28,8 @@ export function render(main, status, CFG) {
       </div>
       <div class="coldstart-right" id="output-container">
         <div class="empty"><div class="empty-icon">📋</div>
-          <div class="empty-title">命令输出</div></div>
+          <div class="empty-title">在左侧填写集群拓扑与凭证，然后点击「生成启动命令」</div>
+          <div class="empty-desc">Gossip 密钥留空自动生成，永不离开浏览器</div></div>
       </div>
     </div>`;
 
@@ -68,7 +69,6 @@ async function _generate(status, CFG) {
 
   const out = document.getElementById('output-container');
   Output.showStatus(status, '推送 HCL 到 GitHub...', 'loading');
-  out.innerHTML = `<pre class="hcl-preview">${esc(hcl)}</pre>`;
 
   try {
     const push = await GitHub.pushFiles(creds.githubPat, repo, branch,
@@ -91,6 +91,12 @@ async function _generate(status, CFG) {
     const cmds = Cmd.build(scripts, gossipKey, nodes);
     Output.showStatus(status, `✅ CI 通过 (${ci.attempts} 次轮询)`, 'ok');
     Output.renderCommands(out, cmds);
+
+    // HCL 骨架折叠到下方
+    const details = document.createElement('details');
+    details.className = 'hcl-details';
+    details.innerHTML = `<summary>📄 已推送的 HCL 骨架</summary><pre class="hcl-preview">${esc(hcl)}</pre>`;
+    out.appendChild(details);
 
     // 添加冷启动完成后的指引
     const guide = document.createElement('div');
