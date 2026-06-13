@@ -178,7 +178,7 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
   margin-bottom:.5rem;
   padding:.6rem .75rem;background:var(--bg-input);border-radius:var(--radius);
   border:1px solid var(--bd);transition:border-color .15s;
-  flex-wrap:wrap;
+  flex-wrap:nowrap;overflow-x:auto;
 }
 .node-row:hover{border-color:var(--bd-hover)}
 .node-row .fg{margin-bottom:0}
@@ -525,12 +525,12 @@ input:disabled,select:disabled{
 /* ── Coldstart Layout ─────────────────────────────────── */
 .coldstart-layout{
   display:grid;
-  grid-template-columns:minmax(300px,5fr) minmax(360px,7fr);
+  grid-template-columns:minmax(380px,2fr) minmax(300px,1fr);
   gap:2rem;
   min-height:480px;
   align-items:start;
 }
-@media(max-width:940px){
+@media(max-width:900px){
   .coldstart-layout{grid-template-columns:1fr;gap:1.5rem}
 }
 .coldstart-left,.coldstart-right{
