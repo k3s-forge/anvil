@@ -28,11 +28,11 @@ jobs:
 
       - name: Compile HCL → Shell
         run: |
-          mkdir -p bootstrap
+          mkdir -p bootstrap/compiled
           for f in bootstrap/pending/*.hcl; do
             [ -f "$f" ] || continue
             echo "::group::$(basename "$f")"
-            node scripts/compile.mjs "$f" bootstrap/
+            node scripts/compile.mjs "$f" bootstrap/compiled/
             echo "::endgroup::"
           done
 
@@ -40,7 +40,7 @@ jobs:
         run: |
           git config user.name  "Bootstrap CI"
           git config user.email "ci@nomad-bootstrap.local"
-          git add bootstrap/*.sh
+          git add bootstrap/compiled/*.sh bootstrap/compiled/*.hcl
           rm -f bootstrap/pending/*.hcl
           git add bootstrap/pending/
           git diff --cached --quiet || git commit -m "bootstrap: compile $(date -u +%Y%m%d-%H%M)" && git push
