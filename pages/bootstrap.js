@@ -39,10 +39,9 @@ export function render(main, status, CFG) {
 
 function _renderTopoUI(container) {
   TopoUI.render(container, nodes, e => {
-    if (e.type === 'add')         nodes = Topo.addNode(nodes);
-    else if (e.type === 'remove') nodes = Topo.removeNode(nodes, e.id);
-    else if (e.type === 'update') nodes = Topo.updateNode(nodes, e.id, e.field, e.value);
-    _renderTopoUI(container);
+    if (e.type === 'add')         { nodes = Topo.addNode(nodes); _renderTopoUI(container); }
+    else if (e.type === 'remove') { nodes = Topo.removeNode(nodes, e.id); _renderTopoUI(container); }
+    else if (e.type === 'update') { nodes = Topo.updateNode(nodes, e.id, e.field, e.value); }
   });
 }
 

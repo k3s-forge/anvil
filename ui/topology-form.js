@@ -29,9 +29,9 @@ export function render(container, nodes, onEvent) {
 
     for (const [sel, field] of Object.entries(FIELDS)) {
       const el = row.querySelector(sel);
-      ['change', 'input'].forEach(ev => el.addEventListener(ev, () => {
+      el.addEventListener('change', () => {
         onEvent({ type: 'update', id: n._id, field, value: el.value });
-      }));
+      });
     }
 
     row.querySelector('.nf-rm').addEventListener('click', () => {
