@@ -4,13 +4,18 @@
 
 import { html as esc, attr as escAttr } from '../lib/escape.js';
 
-export function renderCommands(container, commands) {
-  container.innerHTML = commands.map(c => `
+export function renderCommands(container, commands, statusEl) {
+  if (!commands.length) {
+    container.innerHTML = '<div class="empty"><p>无命令</p></div>';
+    return;
+  }
+
+  container.innerHTML = commands.map((c, i) => `
     <div class="cmd-block">
-      <div class="cmd-label">${c.isSeed ? '🥇 种子 Server' : c.role === 'server' ? '🥈 Server' : '💻 Client'}
+      <div class="cmd-label">${c.isSeed ? '🥇 步骤 1 · 种子' : `🥈 步骤 ${i+1} · 加入`}
         — ${esc(c.name)}</div>
       <pre class="cmd-pre" data-cmd="${escAttr(c.cmd)}"><span class="copy-hint">点击复制</span>${esc(c.cmd)}</pre>
-      <div class="cmd-note">SSH 到目标机，粘贴执行。Gossip 密钥仅在此命令中出现。</div>
+      <div class="cmd-note">${c.isSeed ? '⚠️ 必须先执行此命令，否则后续节点无法加入' : '种子机启动后再执行此命令'}</div>
     </div>`).join('');
 
   container.querySelectorAll('.cmd-pre').forEach(pre => {

@@ -67,9 +67,6 @@ async function _generate(status, CFG) {
   const keyHash = await Crypto.sha256Hex(gossipKey);
   const hcl = HCL.build(nodes, { datacenter: 'dc1' }, keyHash);
 
-  // 保存 Nomad URL
-  if (creds.nomadUrl) localStorage.setItem('anvil_nomad_url', creds.nomadUrl);
-
   const out = document.getElementById('output-container');
   Output.showStatus(status, '推送 HCL 到 GitHub...', 'loading');
 
@@ -85,37 +82,42 @@ async function _generate(status, CFG) {
       return;
     }
 
-    // 加载编译产物
-    const scripts = [];
-    for (const n of nodes) {
-      const url = `https://raw.githubusercontent.com/${repo}/${branch}/bootstrap/compiled/${n.name}.sh`;
-      scripts.push({ name: n.name, url });
-    }
-    const cmds = Cmd.build(scripts, gossipKey, nodes);
-    Output.showStatus(status, `✅ CI 通过 (${ci.attempts} 次轮询)`, 'ok');
-    Output.renderCommands(out, cmds);
+    // 编译产物：仅 Server 节点
+    const srvNodes = nodes.filter(n => n.role === 'server');
+    const clientNodes = nodes.filter(n => n.role === 'client');
+    const scripts = srvNodes.map(n => ({
+      name: n.name,
+      url: `https://raw.githubusercontent.com/${repo}/${branch}/bootstrap/compiled/${n.name}.sh`,
+    }));
 
-    // HCL 骨架折叠到下方
+    const cmds = Cmd.build(scripts, gossipKey, nodes);
+    Output.showStatus(status, `✅ Server 编译完成`, 'ok');
+    Output.renderCommands(out, cmds, status);
+
+    // 后续指引
+    const guide = document.createElement('div');
+    guide.className = 'bootstrap-guide';
+    const clientNote = clientNodes.length
+      ? `<p class="text-muted">⚡ Client 节点（${clientNodes.map(n=>n.name).join('、')}）在集群上线后通过 Nomad join 命令加入，无需冷启动脚本。</p>`
+      : '';
+    guide.innerHTML = `
+      <div class="section-divider"></div>
+      <h4>📋 执行顺序</h4>
+      <ol class="guide-steps">
+        <li><strong>先</strong> SSH 到种子机，粘贴执行 🥇 命令</li>
+        <li>等待种子机启动完成，终端打印 <code>NOMAD MANAGEMENT TOKEN</code> — <strong>务必保存</strong></li>
+        <li><strong>再</strong> SSH 到其余 Server，依次执行 🥈 命令</li>
+        <li>脚本自动：安装 Nomad → 加入 Raft → 部署 Kanidm + Nginx 反代</li>
+      </ol>
+      ${clientNote}
+      <p class="text-muted" style="margin-top:.75rem">集群上线后回到 <a href="#deploy">📦 Job 提交</a> 页面登录并提交业务任务。</p>`;
+    out.appendChild(guide);
+
+    // HCL 骨架折叠
     const details = document.createElement('details');
     details.className = 'hcl-details';
     details.innerHTML = `<summary>📄 已推送的 HCL 骨架</summary><pre class="hcl-preview">${esc(hcl)}</pre>`;
     out.appendChild(details);
-
-    // 添加冷启动完成后的指引
-    const guide = document.createElement('div');
-    guide.className = 'bootstrap-guide';
-    guide.innerHTML = `
-      <div class="section-divider"></div>
-      <h4>📋 启动后步骤</h4>
-      <ol class="guide-steps">
-        <li>SSH 到种子机，<strong>粘贴执行</strong>上面的 curl 命令</li>
-        <li>脚本自动完成：安装 Nomad → 启动 → ACL bootstrap → 部署 Kanidm + Nginx</li>
-        <li>终端会打印 <code>NOMAD MANAGEMENT TOKEN</code>，<strong>务必保存</strong></li>
-        <li>Nginx 反代在 <code>:4647</code>，用于浏览器调 Nomad API</li>
-        <li>Kanidm 在 <code>:8443</code>，需手动配置 OIDC client</li>
-      </ol>
-      <p class="text-muted">完成后回到 <a href="#deploy">📦 Job 提交</a> 页面，登录即可提交任务。</p>`;
-    out.appendChild(guide);
   } catch (err) {
     Output.showStatus(status, `失败: ${err.message}`, 'err');
   }
