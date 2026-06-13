@@ -10,7 +10,7 @@ job "kanidm" {
 
     constraint {
       attribute = "${node.unique.name}"
-      value     = "seed-1"
+      value     = "seed"
     }
 
     network {
