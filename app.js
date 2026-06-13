@@ -10,11 +10,14 @@ import * as Output  from './ui/output.js';
 import * as LoginUI from './ui/login.js';
 import { html as esc } from './lib/escape.js';
 
-import { render as pageBootstrap } from './pages/bootstrap.js';
-import { render as pageDeploy    } from './pages/deploy.js';
-import { render as pageApproval  } from './pages/approval.js';
-import { render as pageAudit     } from './pages/audit.js';
-import { render as pageMaint     } from './pages/maintenance.js';
+// 页面模块按需动态加载（避免静态 import 被浏览器模块缓存锁死）
+const PAGES = {
+  bootstrap:  () => import('./pages/bootstrap.js'),
+  deploy:     () => import('./pages/deploy.js'),
+  approval:   () => import('./pages/approval.js'),
+  audit:      () => import('./pages/audit.js'),
+  maintenance:() => import('./pages/maintenance.js'),
+};
 
 // ---- Config ----
 const CFG = {
@@ -139,19 +142,18 @@ function _getPageFromHash() {
   return h || 'bootstrap';
 }
 
-function _renderPage() {
+async function _renderPage() {
   const page = window._anvil.page;
   _renderNav();
   const main = document.getElementById('main');
   const status = document.getElementById('status-area');
   status.innerHTML = '';
 
-  switch (page) {
-    case 'bootstrap': pageBootstrap(main, status, CFG); break;
-    case 'deploy':    pageDeploy(main, status, CFG);    break;
-    case 'approval':  pageApproval(main, status, CFG);  break;
-    case 'audit':     pageAudit(main, status, CFG);     break;
-    case 'maintenance': pageMaint(main, status, CFG);   break;
-    default: window._anvil.page = 'bootstrap'; _renderPage();
+  const loader = PAGES[page];
+  if (!loader) {
+    window._anvil.page = 'bootstrap';
+    return _renderPage();
   }
+  const mod = await loader();
+  mod.render(main, status, CFG);
 }
