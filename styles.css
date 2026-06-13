@@ -158,9 +158,12 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
   width:100%;padding:.65rem .85rem;
   background:var(--bg-input);border:1px solid var(--bd);
   border-radius:var(--radius-sm);color:var(--tx);
-  font-family:var(--mono);font-size:.85rem;
+  font-size:.85rem;
   transition:all .2s ease;outline:none;
 }
+.fg input{font-family:var(--mono)}
+.fg select{font-family:var(--font)}
+.fg textarea{font-family:var(--mono)}
 .fg input:focus,.fg select:focus,.fg textarea:focus{
   border-color:var(--ac);
   box-shadow:0 0 0 3px var(--ac-glow);
@@ -171,15 +174,21 @@ section h2{font-size:1.05rem;font-weight:600;margin-bottom:1.25rem;letter-spacin
 
 /* ── Node Row ──────────────────────────────────────────── */
 .node-row{
-  display:grid;grid-template-columns:1.5fr 2fr 1fr .3fr;gap:.5rem;
+  display:grid;grid-template-columns:1.5fr 2fr 1.1fr auto;gap:.6rem;
   align-items:end;margin-bottom:.5rem;
-  padding:.85rem;background:var(--bg-input);border-radius:var(--radius);
+  padding:.75rem .85rem;background:var(--bg-input);border-radius:var(--radius);
   border:1px solid var(--bd);transition:border-color .15s;
 }
 .node-row:hover{border-color:var(--bd-hover)}
 .node-row .fg{margin-bottom:0}
-.node-row .fg label{font-size:.72rem}
-@media(max-width:640px){.node-row{grid-template-columns:1fr}}
+.node-row .fg label{font-size:.72rem;white-space:nowrap}
+.node-row .fg input,
+.node-row .fg select{
+  font-family:var(--font);padding:.55rem .65rem;font-size:.82rem;
+}
+.node-row .nf-rm{align-self:center;margin-bottom:.2rem}
+@media(max-width:700px){.node-row{grid-template-columns:1fr 1fr;gap:.4rem}
+  .node-row .nf-rm{grid-column:span 2;justify-self:end}}
 
 /* ── Status ────────────────────────────────────────────── */
 .status{padding:.75rem 1rem;border-radius:var(--radius);margin:1rem 0;font-size:.85rem;font-weight:500}
@@ -525,11 +534,6 @@ input:disabled,select:disabled{
   font-size:.8rem;color:var(--er);display:none;
 }
 .err-list span{display:block;margin-bottom:.2rem}
-
-/* ── Form inputs (non-mono) ────────────────────────────── */
-.fg input:not([class*="nf-"]):not([class*="ff-"]),.fg select:not([class*="nf-"]){
-  font-family:var(--font);
-}
 
 /* ── Audit Chart Card ─────────────────────────────────── */
 .chart-card{
