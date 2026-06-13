@@ -5,11 +5,13 @@
 set -e
 
 # ---- Args ----
+REINSTALL=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --gossip-key) GOSSIP_KEY="$2"; shift 2 ;;
     --seed-addr)  SEED_ADDR="$2";  shift 2 ;;
-    *) echo "Usage: $0 --gossip-key <key> --seed-addr <ip>"; exit 1 ;;
+    --reinstall)  REINSTALL=1; shift ;;
+    *) echo "Usage: $0 --gossip-key <key> --seed-addr <ip> [--reinstall]"; exit 1 ;;
   esac
 done
 [ -z "$GOSSIP_KEY" ] && { echo "ERROR: --gossip-key required"; exit 1; }
@@ -20,6 +22,14 @@ echo "=== Nomad Bootstrap: srv2 (server) ==="
 # ---- OS check ----
 command -v pkg >/dev/null 2>&1 || { echo "ERROR: FreeBSD required"; exit 1; }
 echo "✓ FreeBSD"
+
+# ---- Reinstall (optional) ----
+if [ "$REINSTALL" = 1 ]; then
+  echo "⚠  REINSTALL: stopping Nomad and purging data"
+  service nomad stop 2>/dev/null || true
+  rm -rf /opt/nomad/data /etc/nomad.d
+  echo "✓ Data purged"
+fi
 
 # ---- Install ----
 if command -v nomad >/dev/null 2>&1; then
