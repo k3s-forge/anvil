@@ -4,19 +4,21 @@
 // 页面渲染委托给 pages/
 // 全局状态仅此文件持有
 
+const BUILD = '7';
+
 import * as OIDC    from './lib/oidc.js';
 import * as Auth    from './lib/auth.js';
 import * as Output  from './ui/output.js';
 import * as LoginUI from './ui/login.js';
 import { html as esc } from './lib/escape.js';
 
-// 页面模块按需动态加载（避免静态 import 被浏览器模块缓存锁死）
+// 页面模块按需动态加载（BUILD 穿透浏览器模块缓存）
 const PAGES = {
-  bootstrap:  () => import('./pages/bootstrap.js'),
-  deploy:     () => import('./pages/deploy.js'),
-  approval:   () => import('./pages/approval.js'),
-  audit:      () => import('./pages/audit.js'),
-  maintenance:() => import('./pages/maintenance.js'),
+  bootstrap:  () => import(`./pages/bootstrap.js?v=${BUILD}`),
+  deploy:     () => import(`./pages/deploy.js?v=${BUILD}`),
+  approval:   () => import(`./pages/approval.js?v=${BUILD}`),
+  audit:      () => import(`./pages/audit.js?v=${BUILD}`),
+  maintenance:() => import(`./pages/maintenance.js?v=${BUILD}`),
 };
 
 // ---- Config ----
