@@ -29,7 +29,7 @@ export function render(container, nodes, onEvent) {
 
     for (const [sel, field] of Object.entries(FIELDS)) {
       const el = row.querySelector(sel);
-      el.addEventListener('change', () => {
+      el.addEventListener('input', () => {
         onEvent({ type: 'update', id: n._id, field, value: el.value });
       });
     }
