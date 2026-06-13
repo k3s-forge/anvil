@@ -539,7 +539,8 @@ function _collectedTitle(n) {
   return [
     `OS: ${c.os_pretty}`, `Kernel: ${c.kernel}`, `Arch: ${c.arch}`,
     `Iface: ${c.best_iface}`, `IP: ${n.ip}`, `GW: ${c.best_gateway}`,
-    `Mem: ${c.mem_mb}MB`, `Disk: ${c.disk_gb}GB`,
+    `Mem: ${c.mem_mb}MB`, `Disk: ${c.disk_gb}GB (${c.disk_type})`, `CPU: ${c.cpu_cores} cores`,
+    `Virt: ${c.virt_type}`,
     `Nomad: ${c.nomad_version || 'none'}`
   ].join('\n');
 }

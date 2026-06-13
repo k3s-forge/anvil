@@ -100,6 +100,37 @@ else
   DISK_GB=$(df -g / 2>/dev/null | awk 'NR==2{print $2}' || echo 0)
 fi
 
+# Disk type (SSD vs HDD)
+DISK_TYPE="unknown"
+if [ "$IS_LINUX" -eq 1 ]; then
+  ROOT_DEV=$(df --output=source / 2>/dev/null | tail -1 | sed 's/[0-9]*$//' || true)
+  ROT="/sys/block/$(basename "$ROOT_DEV" 2>/dev/null)/queue/rotational"
+  if [ -f "$ROT" ]; then
+    if [ "$(cat "$ROT" 2>/dev/null)" = "0" ]; then DISK_TYPE="ssd"; else DISK_TYPE="hdd"; fi
+  fi
+fi
+
+# CPU cores
+CPU_CORES=0
+if [ "$IS_LINUX" -eq 1 ]; then
+  CPU_CORES=$(grep -c "^processor" /proc/cpuinfo 2>/dev/null || echo 0)
+else
+  CPU_CORES=$(sysctl -n hw.ncpu 2>/dev/null || echo 0)
+fi
+
+# Virtualization detection
+VIRT_TYPE="none"
+if [ "$IS_LINUX" -eq 1 ]; then
+  if command -v systemd-detect-virt >/dev/null 2>&1; then
+    VIRT_TYPE=$(systemd-detect-virt 2>/dev/null || echo "none")
+  elif grep -q "^flags.*hypervisor" /proc/cpuinfo 2>/dev/null; then
+    VIRT_TYPE="vm"
+  fi
+elif [ "$OS" = "freebsd" ]; then
+  VT=$(sysctl -n hw.vmm.vcpu_count 2>/dev/null || true)
+  if [ -n "$VT" ] && [ "$VT" -gt 0 ] 2>/dev/null; then VIRT_TYPE="vm"; fi
+fi
+
 NOMAD_VER=""
 command -v nomad >/dev/null 2>&1 && NOMAD_VER=$(nomad version 2>/dev/null | head -1 | grep -o 'v[0-9.]*' || echo "installed") || true
 
@@ -190,6 +221,9 @@ cat <<JSON
   "network_type": "$NET_TYPE",
   "mem_mb": $MEM_MB,
   "disk_gb": $DISK_GB,
+  "disk_type": "$DISK_TYPE",
+  "cpu_cores": $CPU_CORES,
+  "virt_type": "$VIRT_TYPE",
   "pkg_mgr": "$PKG_MGR",
   "nomad_installed": $(if [ -n "$NOMAD_VER" ]; then echo "true"; else echo "false"; fi),
   "nomad_version": "$NOMAD_VER",
