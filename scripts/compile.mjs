@@ -31,7 +31,7 @@ mkdirSync(outDir, { recursive: true });
 for (const node of topo.nodes) {
   const isSeed = node.name === seed.name;
   const gen = isSeed ? genServer : genClient;
-  const script = gen(node, topo.cluster || {}, isSeed ? null : seed);
+  const script = gen(node, topo.cluster || {});
   const fname = node.name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.sh';
 
   writeFileSync(`${outDir}/${fname}`, script, { mode: 0o755 });

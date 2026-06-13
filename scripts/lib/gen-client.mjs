@@ -3,10 +3,10 @@
 // 输入：node{}, cluster{}, firstServer{}
 // 输出：Shell 脚本字符串
 
-export function generate(node, cluster, seed) {
+export function generate(node, cluster) {
   const dc = cluster?.datacenter || 'dc1';
   const isServer = node.role === 'server';
-  const joinAddr = seed ? `${seed.ip}:4648` : '127.0.0.1:4648';
+  const joinAddr = isServer ? 'SEED_ADDR_PLACEHOLDER:4648' : 'SEED_ADDR_PLACEHOLDER:4648';
 
   const serverBlock = isServer ? [
     `server {`,
@@ -31,10 +31,12 @@ export function generate(node, cluster, seed) {
     'while [ $# -gt 0 ]; do',
     '  case "$1" in',
     '    --gossip-key) GOSSIP_KEY="$2"; shift 2 ;;',
-    '    *) echo "Usage: $0 --gossip-key <key>"; exit 1 ;;',
+    '    --seed-addr)  SEED_ADDR="$2";  shift 2 ;;',
+    '    *) echo "Usage: $0 --gossip-key <key> --seed-addr <ip>"; exit 1 ;;',
     '  esac',
     'done',
     '[ -z "$GOSSIP_KEY" ] && { echo "ERROR: --gossip-key required"; exit 1; }',
+    '[ -z "$SEED_ADDR" ]  && { echo "ERROR: --seed-addr required"; exit 1; }',
     '',
     `echo "=== Nomad Bootstrap: ${node.name} (${node.role}) ==="`,
     '',
@@ -67,8 +69,9 @@ export function generate(node, cluster, seed) {
     ``,
     `NMD`,
     '',
-    '# ---- Inject key ----',
+    '# ---- Inject key & addr ----',
     `sed -i '' "s/GOSSIP_KEY_PLACEHOLDER/\${GOSSIP_KEY}/" /etc/nomad.d/${node.role}.hcl`,
+    `sed -i '' "s/SEED_ADDR_PLACEHOLDER:4648/\${SEED_ADDR}:4648/" /etc/nomad.d/${node.role}.hcl`,
     '',
     '# ---- Start ----',
     'sysrc nomad_enable=YES',
