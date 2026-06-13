@@ -1,7 +1,7 @@
 // pages/bootstrap.js
 // 职责：冷启动页 — 种子自举 + 集群扩张双 tab
 // 种子 tab：单节点，推 HCL → CI → curl（暗夜下蛋），完成后设密码封存
-// 扩张 tab：密码解密 sealed.bin → 粘贴 collect JSON → 生成 join 命令
+// 扩张 tab：🔐 密码解密 → 🔑 OIDC 身份验证 → 📋 粘贴 collect → ⚡ 生成 join
 
 import * as Crypto  from '../lib/crypto.js';
 import * as Topo    from '../lib/topology.js';
@@ -19,6 +19,8 @@ const _sq = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'";
 let _tab = 'seed';                 // 'seed' | 'expansion'
 let _seedNode = Topo.createNode('seed-1', '', 'server');
 let _expansionFields = null;       // parsed collect.sh fields for expansion node
+let _expSeedIP = '';               // decrypted from sealed.bin
+let _expGossipKey = '';            // decrypted from sealed.bin
 
 export function render(main, status, CFG) {
   main.innerHTML = `
@@ -279,12 +281,22 @@ function _renderExpansion(container, status, CFG) {
   container.innerHTML = `
     <h3>🥈 ${t('bs.tab.expansion')}</h3>
     <div id="exp-pw-section"></div>
-    <div id="exp-form-section" style="display:none"></div>`;
+    <div id="exp-gate-section" style="display:none"></div>`;
 
+  // Phase 1: decrypt with cluster password
   _renderUnsealSection(document.getElementById('exp-pw-section'), repo, branch,
     (seedIP, gossipKey) => {
-      _renderExpansionForm(document.getElementById('exp-form-section'), seedIP, gossipKey, repo, branch, status);
+      _expSeedIP = seedIP;
+      _expGossipKey = gossipKey;
+      // Phase 2: OIDC identity verification
+      _renderOidcGate(document.getElementById('exp-gate-section'), seedIP, gossipKey, repo, branch, status);
     });
+
+  // Fast path: already decrypted + already logged in → skip to form
+  if (_expSeedIP && Auth.isLoggedIn()) {
+    const gate = document.getElementById('exp-gate-section');
+    _renderExpansionForm(gate, _expSeedIP, _expGossipKey, repo, branch, status);
+  }
 }
 
 function _renderUnsealSection(container, repo, branch, onDecrypted) {
@@ -327,7 +339,7 @@ function _renderUnsealSection(container, repo, branch, onDecrypted) {
 
       msg(t('bs.exp.pw.ok').replace('{ip}', data.seed_ip), 'ok');
 
-      // Activate form section
+      // Phase 2: show OIDC identity gate
       setTimeout(() => onDecrypted(data.seed_ip, data.gossip_key), 400);
     } catch (e) {
       msg(t('bs.exp.pw.err'), 'err');
@@ -338,6 +350,37 @@ function _renderUnsealSection(container, repo, branch, onDecrypted) {
   container.querySelector('#exp-password')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') document.getElementById('btn-unseal')?.click();
   });
+}
+
+// ── OIDC identity gate (Phase 2 of expansion) ────────────
+
+function _renderOidcGate(container, seedIP, gossipKey, repo, branch, status) {
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="section-divider"></div>
+    <div class="status status-ok" style="margin-bottom:.8rem">🔓 Seed: <code>${esc(seedIP)}</code></div>
+    <div class="seal-box" style="text-align:center;padding:2rem">
+      <div style="font-size:2rem;margin-bottom:.5rem">🔑</div>
+      <h4>${t('bs.exp.oidcRequired')}</h4>
+      <p class="seal-desc">${t('bs.exp.oidcRequiredDesc')}</p>
+      <button class="btn btn-primary" id="btn-exp-oidc-login">${t('nav.login')}</button>
+    </div>`;
+
+  document.getElementById('btn-exp-oidc-login').addEventListener('click', () => {
+    if (typeof Auth.login === 'function') Auth.login();
+  });
+
+  // Poll for OIDC login completion
+  let count = 0;
+  const iv = setInterval(() => {
+    count++;
+    if (Auth.isLoggedIn()) {
+      clearInterval(iv);
+      _renderExpansionForm(container, seedIP, gossipKey, repo, branch, status);
+    } else if (count > 120) {
+      clearInterval(iv);
+    }
+  }, 1000);
 }
 
 function _renderExpansionForm(container, seedIP, gossipKey, repo, branch, status) {
